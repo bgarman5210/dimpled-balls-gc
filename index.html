@@ -285,31 +285,80 @@
       }
     }
 
-    async function submitAttestation() {
-      const attestor = document.getElementById('attestor-select').value;
-      const fileInput = document.getElementById('scorecard-file');
+async function submitAttestation() {
+  const attestor = document.getElementById('attestor-select').value;
+  const fileInput = document.getElementById('scorecard-file');
 
-      if (!attestor) {
-        alert("Please select the playing partner attesting this card.");
-        return;
-      }
+  if (!attestor) {
+    alert("Please select the playing partner attesting this card.");
+    return;
+  }
 
-      if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const fileName = `week1-${Date.now()}-${file.name}`;
-        const { data, error } = await client.storage
-          .from('scorecards')
-          .upload(fileName, file);
+  let photoUrl = null;
 
-        if (error) {
-          alert("Error uploading card: " + error.message);
-          return;
-        }
-      }
+  if (fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    const fileName = `week1-${Date.now()}-${file.name}`;
+    const { data, error } = await client.storage
+      .from('scorecards')
+      .upload(fileName, file);
 
-      alert("Group round attested & scores saved! Leaderboard updated.");
-      switchTab('board');
+    if (error) {
+      alert("Error uploading card: " + error.message);
+      return;
     }
+    photoUrl = fileName;
+  }
+
+  // 1. Create Pairing/Group Record
+  const { data: pairingData, error: pairingErr } = await client
+    .from('pairings')
+    .insert([{
+      week_id: 'w0000001-0000-0000-0000-000000000001',
+      group_number: 1,
+      attestor_id: attestor,
+      scorecard_photo_url: photoUrl,
+      status: 'attested'
+    }])
+    .select();
+
+  if (pairingErr) {
+    alert("Error creating round record: " + pairingErr.message);
+    return;
+  }
+
+  const pairingId = pairingData[0].id;
+
+  // 2. Insert Hole Scores for the Group
+  const scoreRows = [];
+  const activeFoursome = players.slice(0, 4);
+
+  activeFoursome.forEach(p => {
+    const courseHdcp = Math.round((p.handicap_index / 2) * (131 / 113) + (34.9 - 36));
+    holes.forEach(h => {
+      const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
+      const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
+      scoreRows.push({
+        pairing_id: pairingId,
+        player_id: p.id,
+        hole_number: h.hole_number,
+        gross_score: gross,
+        net_score: gross - strokes,
+        strokes_received: strokes
+      });
+    });
+  });
+
+  const { error: scoresErr } = await client.from('scores').insert(scoreRows);
+
+  if (scoresErr) {
+    alert("Error saving hole scores: " + scoresErr.message);
+    return;
+  }
+
+  alert("Group round attested & scores saved to database! Leaderboard updated.");
+  switchTab('board');
+}
 
     window.onload = init;
   </script>
