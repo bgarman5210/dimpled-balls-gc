@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#166534" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Dimpled Balls GC</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-12 select-none">
+  <!-- Header -->
+  <header class="bg-emerald-900 px-4 py-3 flex justify-between items-center shadow-md sticky top-0 z-30">
+    <div>
+      <h1 class="text-xl font-black tracking-tight text-white flex items-center gap-1.5">
+        ⛳ Dimpled Balls <span class="text-emerald-400 text-sm font-semibold">GC</span>
+      </h1>
+      <p id="course-header" class="text-xs text-emerald-200">Morgan Creek • Blue/White (Front 9)</p>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="switchTab('scoring')" id="tab-btn-scoring" class="px-3 py-1 text-xs font-bold rounded-lg bg-emerald-700 text-white shadow">Scorer</button>
+      <button onclick="switchTab('board')" id="tab-btn-board" class="px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300">Leaderboard</button>
+    </div>
+  </header>
+
+  <!-- SCORING TAB -->
+  <main id="view-scoring" class="p-4 max-w-lg mx-auto">
+    <!-- Hole Selector Banner -->
+    <div class="bg-slate-800 rounded-xl p-3 mb-4 shadow border border-slate-700">
+      <div class="flex justify-between items-center mb-2">
+        <div>
+          <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Current Hole</span>
+          <div class="text-2xl font-black text-white flex items-baseline gap-2">
+            Hole <span id="current-hole-num">1</span>
+            <span id="hole-par-yardage" class="text-xs font-normal text-slate-400">Par 4 • 376 yds</span>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-slate-400">Men's Stroke HDCP</span>
+          <div id="hole-hdcp-rank" class="text-sm font-bold text-emerald-400">Stroke Rank #1</div>
+        </div>
+      </div>
+
+      <!-- Hole Navigation Buttons -->
+      <div class="grid grid-cols-9 gap-1" id="hole-nav-buttons">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- Players Score Entry List -->
+    <div id="player-score-cards" class="space-y-3 mb-6">
+      <!-- Player row cards will inject here -->
+    </div>
+
+    <!-- Attestation & Card Photo Upload Section -->
+    <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 space-y-3">
+      <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+        📸 Scorecard Attestation & Backup
+      </h3>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Assign an attesting playing partner and snap a photo of the card to lock scores for the 19th hole.
+      </p>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Attested By</label>
+        <select id="attestor-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+          <option value="">Select Playing Partner...</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Scorecard Photo</label>
+        <input type="file" id="scorecard-file" accept="image/*" capture="environment" 
+               class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-800 file:text-white hover:file:bg-emerald-700 cursor-pointer" />
+      </div>
+
+      <button onclick="submitAttestation()" class="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-xl text-sm font-bold text-white tracking-wide shadow-lg transition">
+        Finalize Group & Attest
+      </button>
+    </div>
+  </main>
+
+  <!-- LEADERBOARD TAB -->
+  <main id="view-board" class="p-4 max-w-lg mx-auto hidden">
+    <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow mb-4">
+      <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400 mb-3 flex justify-between items-center">
+        <span>🏆 Live Net Leaderboard</span>
+        <span class="text-xs font-normal text-slate-400">Auto-refreshing</span>
+      </h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase">
+              <th class="py-2 px-2">Pos</th>
+              <th class="py-2 px-2">Player</th>
+              <th class="py-2 px-1 text-center">Thru</th>
+              <th class="py-2 px-1 text-center">Gross</th>
+              <th class="py-2 px-1 text-center font-bold text-white">Net</th>
+              <th class="py-2 px-2 text-right">Pts</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body" class="divide-y divide-slate-800">
+            <!-- Dynamic rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // SUPABASE CLIENT INITIALIZATION
+    const SUPABASE_URL = "https://gwypedlsbxwfvqmrzofh.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_WHgYGudqf_qMKG7m2e02nw_ZaFW9Q2s";
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let holes = [];
+    let currentHoleIndex = 0;
+    let players = [];
+    let groupScores = {}; // { [playerId]: { [holeNum]: grossScore } }
+
+    const FEDEX_POINTS = [500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50];
+
+    async function init() {
+      // 1. Fetch Morgan Creek Front 9 Hole Details
+      const { data: holeData } = await client
+        .from('course_holes')
+        .select('*')
+        .eq('side', 'Front')
+        .order('hole_number', { ascending: true });
+      holes = holeData || [];
+
+      // 2. Fetch Active Players
+      const { data: playerData } = await client
+        .from('players')
+        .select('*')
+        .order('name');
+      players = playerData || [];
+
+      // Populate Attestor dropdown
+      const attestSelect = document.getElementById('attestor-select');
+      players.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        attestSelect.appendChild(opt);
+      });
+
+      // Default Group: Brian Garman + First 3 players
+      renderHoleNav();
+      renderCurrentHole();
+      renderLeaderboard();
+    }
+
+    function renderHoleNav() {
+      const nav = document.getElementById('hole-nav-buttons');
+      nav.innerHTML = '';
+      holes.forEach((h, idx) => {
+        const btn = document.createElement('button');
+        btn.textContent = h.hole_number;
+        btn.className = `py-2 rounded-lg text-xs font-bold transition ${
+          idx === currentHoleIndex 
+            ? 'bg-emerald-500 text-slate-950 font-black shadow-md' 
+            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+        }`;
+        btn.onclick = () => {
+          currentHoleIndex = idx;
+          renderHoleNav();
+          renderCurrentHole();
+        };
+        nav.appendChild(btn);
+      });
+    }
+
+    function renderCurrentHole() {
+      if (!holes.length) return;
+      const h = holes[currentHoleIndex];
+      document.getElementById('current-hole-num').textContent = h.hole_number;
+      document.getElementById('hole-par-yardage').textContent = `Par ${h.par} • ${h.yardage} yds`;
+      document.getElementById('hole-hdcp-rank').textContent = `Stroke Rank #${h.league_stroke_rank}`;
+
+      const container = document.getElementById('player-score-cards');
+      container.innerHTML = '';
+
+      // Render score cards for the primary active foursome
+      const currentFoursome = players.slice(0, 4);
+
+      currentFoursome.forEach(player => {
+        // Compute 9-hole Course Handicap
+        // 9H CH = Round(Index / 2 * (131 / 113) + (34.9 - 36))
+        const courseHdcp = Math.round((player.handicap_index / 2) * (131 / 113) + (34.9 - 36));
+        const strokesOnHole = courseHdcp >= h.league_stroke_rank ? 1 : 0;
+
+        if (!groupScores[player.id]) groupScores[player.id] = {};
+        const currentGross = groupScores[player.id][h.hole_number] || h.par;
+
+        const card = document.createElement('div');
+        card.className = "bg-slate-800 rounded-xl p-3 border border-slate-700 flex justify-between items-center";
+        card.innerHTML = `
+          <div>
+            <div class="text-sm font-bold text-white flex items-center gap-1.5">
+              ${player.name}
+              ${strokesOnHole ? '<span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400" title="Strokes allocated"></span>' : ''}
+            </div>
+            <div class="text-xs text-slate-400">
+              CH: ${courseHdcp} • Net: <span class="font-bold text-emerald-400" id="net-${player.id}">${currentGross - strokesOnHole}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="adjustScore('${player.id}', -1)" class="w-10 h-10 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-lg text-lg font-black text-white flex items-center justify-center">-</button>
+            <span id="gross-${player.id}" class="w-8 text-center text-xl font-black text-white">${currentGross}</span>
+            <button onclick="adjustScore('${player.id}', 1)" class="w-10 h-10 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-lg text-lg font-black text-white flex items-center justify-center">+</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function adjustScore(playerId, delta) {
+      const h = holes[currentHoleIndex];
+      const courseHdcp = Math.round((players.find(p=>p.id===playerId).handicap_index / 2) * (131 / 113) + (34.9 - 36));
+      const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
+
+      let score = (groupScores[playerId][h.hole_number] || h.par) + delta;
+      if (score < 1) score = 1;
+
+      groupScores[playerId][h.hole_number] = score;
+      document.getElementById(`gross-${playerId}`).textContent = score;
+      document.getElementById(`net-${playerId}`).textContent = score - strokes;
+      renderLeaderboard();
+    }
+
+    function renderLeaderboard() {
+      const tbody = document.getElementById('leaderboard-body');
+      tbody.innerHTML = '';
+
+      const leaderboardData = players.slice(0, 4).map(p => {
+        let totalGross = 0;
+        let totalNet = 0;
+        let holesPlayed = 0;
+
+        holes.forEach(h => {
+          if (groupScores[p.id] && groupScores[p.id][h.hole_number]) {
+            const courseHdcp = Math.round((p.handicap_index / 2) * (131 / 113) + (34.9 - 36));
+            const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
+            const gross = groupScores[p.id][h.hole_number];
+            totalGross += gross;
+            totalNet += (gross - strokes);
+            holesPlayed++;
+          }
+        });
+
+        return { name: p.name, thru: holesPlayed, gross: totalGross, net: totalNet };
+      });
+
+      leaderboardData.sort((a, b) => a.net - b.net);
+
+      leaderboardData.forEach((row, i) => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-slate-800 text-xs";
+        tr.innerHTML = `
+          <td class="py-2.5 px-2 font-bold text-slate-400">${i + 1}</td>
+          <td class="py-2.5 px-2 font-medium text-white">${row.name}</td>
+          <td class="py-2.5 px-1 text-center text-slate-400">${row.thru}</td>
+          <td class="py-2.5 px-1 text-center text-slate-300 font-semibold">${row.gross || '-'}</td>
+          <td class="py-2.5 px-1 text-center text-emerald-400 font-black text-sm">${row.net || '-'}</td>
+          <td class="py-2.5 px-2 text-right text-amber-400 font-bold">${FEDEX_POINTS[i] || 0}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function switchTab(tab) {
+      if (tab === 'scoring') {
+        document.getElementById('view-scoring').classList.remove('hidden');
+        document.getElementById('view-board').classList.add('hidden');
+        document.getElementById('tab-btn-scoring').className = "px-3 py-1 text-xs font-bold rounded-lg bg-emerald-700 text-white shadow";
+        document.getElementById('tab-btn-board').className = "px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300";
+      } else {
+        document.getElementById('view-scoring').classList.add('hidden');
+        document.getElementById('view-board').classList.remove('hidden');
+        document.getElementById('tab-btn-board').className = "px-3 py-1 text-xs font-bold rounded-lg bg-emerald-700 text-white shadow";
+        document.getElementById('tab-btn-scoring').className = "px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300";
+        renderLeaderboard();
+      }
+    }
+
+    async function submitAttestation() {
+      const attestor = document.getElementById('attestor-select').value;
+      const fileInput = document.getElementById('scorecard-file');
+
+      if (!attestor) {
+        alert("Please select the playing partner attesting this card.");
+        return;
+      }
+
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const fileName = `week1-${Date.now()}-${file.name}`;
+        const { data, error } = await client.storage
+          .from('scorecards')
+          .upload(fileName, file);
+
+        if (error) {
+          alert("Error uploading card: " + error.message);
+          return;
+        }
+      }
+
+      alert("Group round attested & scores saved! Leaderboard updated.");
+      switchTab('board');
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
