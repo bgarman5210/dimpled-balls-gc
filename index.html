@@ -24,8 +24,48 @@
     </div>
   </header>
 
-  <!-- SCORING TAB -->
-  <main id="view-scoring" class="p-4 max-w-lg mx-auto">
+  <!-- VIEW: GROUP SETUP (SHOWN IF NO ACTIVE ROUND) -->
+  <main id="view-setup" class="p-4 max-w-lg mx-auto">
+    <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-4">
+      <div>
+        <h2 class="text-base font-bold text-white flex items-center gap-1.5">
+          🏌️‍♂️ Start Group Round
+        </h2>
+        <p class="text-xs text-slate-400">Choose your tee-time slot and check off 1 to 4 golfers in your group.</p>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1">Starting Group / Tee Time</label>
+        <select id="setup-group-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+          <option value="1|16:00">Group 1 • 4:00 PM</option>
+          <option value="2|16:10">Group 2 • 4:10 PM</option>
+          <option value="3|16:20">Group 3 • 4:20 PM</option>
+          <option value="4|16:30">Group 4 • 4:30 PM</option>
+          <option value="5|16:40">Group 5 • 4:40 PM</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-2">Select Golfers in this Group (<span id="selected-count">0</span>/4)</label>
+        <div id="player-checklist" class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+
+      <button onclick="startGroupRound()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-xl text-sm font-bold text-white tracking-wide shadow-lg transition">
+        Confirm Group & Tee Off
+      </button>
+    </div>
+  </main>
+
+  <!-- VIEW: ACTIVE SCORING (HIDDEN INITIALLY) -->
+  <main id="view-scoring" class="p-4 max-w-lg mx-auto hidden">
+    <!-- Group Info Bar -->
+    <div class="flex justify-between items-center mb-3 text-xs px-1">
+      <span id="active-group-tag" class="font-bold text-emerald-400 uppercase tracking-wide">Group 1 • 4:00 PM</span>
+      <button onclick="resetGroupSelection()" class="text-slate-400 underline hover:text-white">Change Group</button>
+    </div>
+
     <!-- Hole Selector Banner -->
     <div class="bg-slate-800 rounded-xl p-3 mb-4 shadow border border-slate-700">
       <div class="flex justify-between items-center mb-2">
@@ -37,29 +77,25 @@
           </div>
         </div>
         <div class="text-right">
-          <span class="text-xs text-slate-400">Men's Stroke HDCP</span>
-          <div id="hole-hdcp-rank" class="text-sm font-bold text-emerald-400">Stroke Rank #1</div>
+          <span class="text-xs text-slate-400">Stroke HDCP</span>
+          <div id="hole-hdcp-rank" class="text-sm font-bold text-emerald-400">Rank #1</div>
         </div>
       </div>
 
-      <!-- Hole Navigation Buttons -->
-      <div class="grid grid-cols-9 gap-1" id="hole-nav-buttons">
-        <!-- Injected via JavaScript -->
-      </div>
+      <!-- Hole Navigation -->
+      <div class="grid grid-cols-9 gap-1" id="hole-nav-buttons"></div>
     </div>
 
-    <!-- Players Score Entry List -->
-    <div id="player-score-cards" class="space-y-3 mb-6">
-      <!-- Player row cards will inject here -->
-    </div>
+    <!-- Player Score Cards -->
+    <div id="player-score-cards" class="space-y-3 mb-6"></div>
 
-    <!-- Attestation & Card Photo Upload Section -->
+    <!-- Attestation & Upload -->
     <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 space-y-3">
       <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
         📸 Scorecard Attestation & Backup
       </h3>
       <p class="text-xs text-slate-400 leading-relaxed">
-        Assign an attesting playing partner and snap a photo of the card to lock scores for the 19th hole.
+        Select a playing partner to attest and take a photo of the card to finalize scores.
       </p>
 
       <div>
@@ -75,19 +111,23 @@
                class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-800 file:text-white hover:file:bg-emerald-700 cursor-pointer" />
       </div>
 
-      <button onclick="submitAttestation()" class="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-xl text-sm font-bold text-white tracking-wide shadow-lg transition">
+      <button onclick="submitAttestation()" id="btn-submit-round" class="w-full mt-2 py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-xl text-sm font-bold text-white tracking-wide shadow-lg transition">
         Finalize Group & Attest
       </button>
     </div>
   </main>
 
-  <!-- LEADERBOARD TAB -->
+  <!-- VIEW: LEADERBOARD -->
   <main id="view-board" class="p-4 max-w-lg mx-auto hidden">
     <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow mb-4">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400 mb-3 flex justify-between items-center">
-        <span>🏆 Live Net Leaderboard</span>
-        <span class="text-xs font-normal text-slate-400">Auto-refreshing</span>
-      </h2>
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">
+          🏆 Live Net Leaderboard
+        </h2>
+        <button onclick="fetchLeaderboard()" class="text-xs text-slate-400 hover:text-white flex items-center gap-1">
+          🔄 Refresh
+        </button>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
           <thead>
@@ -100,29 +140,29 @@
               <th class="py-2 px-2 text-right">Pts</th>
             </tr>
           </thead>
-          <tbody id="leaderboard-body" class="divide-y divide-slate-800">
-            <!-- Dynamic rows -->
-          </tbody>
+          <tbody id="leaderboard-body" class="divide-y divide-slate-800"></tbody>
         </table>
       </div>
     </div>
   </main>
 
   <script>
-    // SUPABASE CLIENT INITIALIZATION
     const SUPABASE_URL = "https://gwypedlsbxwfvqmrzofh.supabase.co";
     const SUPABASE_KEY = "sb_publishable_WHgYGudqf_qMKG7m2e02nw_ZaFW9Q2s";
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let holes = [];
     let currentHoleIndex = 0;
-    let players = [];
-    let groupScores = {}; // { [playerId]: { [holeNum]: grossScore } }
+    let allPlayers = [];
+    let selectedGroupPlayers = [];
+    let activeGroupNum = 1;
+    let activeTeeTime = "16:00";
+    let groupScores = {};
 
     const FEDEX_POINTS = [500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50];
 
     async function init() {
-      // 1. Fetch Morgan Creek Front 9 Hole Details
+      // 1. Fetch Morgan Creek Front 9
       const { data: holeData } = await client
         .from('course_holes')
         .select('*')
@@ -135,21 +175,79 @@
         .from('players')
         .select('*')
         .order('name');
-      players = playerData || [];
+      allPlayers = playerData || [];
 
-      // Populate Attestor dropdown
+      renderChecklist();
+      renderHoleNav();
+      fetchLeaderboard();
+    }
+
+    function renderChecklist() {
+      const container = document.getElementById('player-checklist');
+      container.innerHTML = '';
+      allPlayers.forEach(p => {
+        const div = document.createElement('label');
+        div.className = "flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-700/60 cursor-pointer hover:bg-slate-750";
+        div.innerHTML = `
+          <div class="flex items-center gap-2">
+            <input type="checkbox" value="${p.id}" onchange="updateSelectedCount()" class="player-checkbox w-4 h-4 rounded text-emerald-600 bg-slate-800 border-slate-600 focus:ring-emerald-500" />
+            <span class="text-sm font-medium text-white">${p.name}</span>
+          </div>
+          <span class="text-xs text-slate-400">HDCP ${p.handicap_index}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateSelectedCount() {
+      const checked = document.querySelectorAll('.player-checkbox:checked');
+      document.getElementById('selected-count').textContent = checked.length;
+      if (checked.length > 4) {
+        alert("Maximum 4 golfers per group.");
+        event.target.checked = false;
+        document.getElementById('selected-count').textContent = 4;
+      }
+    }
+
+    function startGroupRound() {
+      const checkedBoxes = Array.from(document.querySelectorAll('.player-checkbox:checked'));
+      if (checkedBoxes.length === 0) {
+        alert("Please select at least 1 player to begin scoring.");
+        return;
+      }
+
+      const selectedIds = checkedBoxes.map(cb => cb.value);
+      selectedGroupPlayers = allPlayers.filter(p => selectedIds.includes(p.id));
+
+      const groupSelection = document.getElementById('setup-group-select').value.split('|');
+      activeGroupNum = parseInt(groupSelection[0]);
+      activeTeeTime = groupSelection[1];
+
+      document.getElementById('active-group-tag').textContent = `Group ${activeGroupNum} • ${activeTeeTime}`;
+
+      // Populate Attestor Dropdown with selected group members
       const attestSelect = document.getElementById('attestor-select');
-      players.forEach(p => {
+      attestSelect.innerHTML = '<option value="">Select Playing Partner...</option>';
+      selectedGroupPlayers.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = p.name;
         attestSelect.appendChild(opt);
       });
 
-      // Default Group: Brian Garman + First 3 players
-      renderHoleNav();
+      // Switch views
+      document.getElementById('view-setup').classList.add('hidden');
+      document.getElementById('view-scoring').classList.remove('hidden');
+
       renderCurrentHole();
-      renderLeaderboard();
+    }
+
+    function resetGroupSelection() {
+      if (confirm("Return to group selection? Any unfinalized scores for this group will be cleared.")) {
+        groupScores = {};
+        document.getElementById('view-scoring').classList.add('hidden');
+        document.getElementById('view-setup').classList.remove('hidden');
+      }
     }
 
     function renderHoleNav() {
@@ -177,17 +275,13 @@
       const h = holes[currentHoleIndex];
       document.getElementById('current-hole-num').textContent = h.hole_number;
       document.getElementById('hole-par-yardage').textContent = `Par ${h.par} • ${h.yardage} yds`;
-      document.getElementById('hole-hdcp-rank').textContent = `Stroke Rank #${h.league_stroke_rank}`;
+      document.getElementById('hole-hdcp-rank').textContent = `Rank #${h.league_stroke_rank}`;
 
       const container = document.getElementById('player-score-cards');
       container.innerHTML = '';
 
-      // Render score cards for the primary active foursome
-      const currentFoursome = players.slice(0, 4);
-
-      currentFoursome.forEach(player => {
-        // Compute 9-hole Course Handicap
-        // 9H CH = Round(Index / 2 * (131 / 113) + (34.9 - 36))
+      selectedGroupPlayers.forEach(player => {
+        // Course Handicap = Round(Index / 2 * (131 / 113) + (34.9 - 36))
         const courseHdcp = Math.round((player.handicap_index / 2) * (131 / 113) + (34.9 - 36));
         const strokesOnHole = courseHdcp >= h.league_stroke_rank ? 1 : 0;
 
@@ -218,7 +312,8 @@
 
     function adjustScore(playerId, delta) {
       const h = holes[currentHoleIndex];
-      const courseHdcp = Math.round((players.find(p=>p.id===playerId).handicap_index / 2) * (131 / 113) + (34.9 - 36));
+      const player = selectedGroupPlayers.find(p => p.id === playerId);
+      const courseHdcp = Math.round((player.handicap_index / 2) * (131 / 113) + (34.9 - 36));
       const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
 
       let score = (groupScores[playerId][h.hole_number] || h.par) + delta;
@@ -227,44 +322,146 @@
       groupScores[playerId][h.hole_number] = score;
       document.getElementById(`gross-${playerId}`).textContent = score;
       document.getElementById(`net-${playerId}`).textContent = score - strokes;
-      renderLeaderboard();
     }
 
-    function renderLeaderboard() {
-      const tbody = document.getElementById('leaderboard-body');
-      tbody.innerHTML = '';
+    async function submitAttestation() {
+      const attestor = document.getElementById('attestor-select').value;
+      const fileInput = document.getElementById('scorecard-file');
+      const submitBtn = document.getElementById('btn-submit-round');
 
-      const leaderboardData = players.slice(0, 4).map(p => {
-        let totalGross = 0;
-        let totalNet = 0;
-        let holesPlayed = 0;
+      if (!attestor) {
+        alert("Please select the playing partner attesting this card.");
+        return;
+      }
 
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Finalizing & Syncing...";
+
+      let photoUrl = null;
+
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const fileName = `week1-g${activeGroupNum}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        const { data, error } = await client.storage
+          .from('scorecards')
+          .upload(fileName, file);
+
+        if (error) {
+          alert("Error uploading card: " + error.message);
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Finalize Group & Attest";
+          return;
+        }
+        photoUrl = fileName;
+      }
+
+      // 1. Get Week 1 Record
+      const { data: weekData } = await client.from('weeks').select('id').eq('week_number', 1).limit(1);
+      const weekId = weekData[0].id;
+
+      // 2. Create Pairing
+      const { data: pairingData, error: pairingErr } = await client
+        .from('pairings')
+        .insert([{
+          week_id: weekId,
+          group_number: activeGroupNum,
+          tee_time: activeTeeTime,
+          attestor_id: attestor,
+          scorecard_photo_url: photoUrl,
+          status: 'attested'
+        }])
+        .select();
+
+      if (pairingErr) {
+        alert("Error saving pairing: " + pairingErr.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Finalize Group & Attest";
+        return;
+      }
+
+      const pairingId = pairingData[0].id;
+
+      // 3. Link Players to Pairing
+      const pairingMembers = selectedGroupPlayers.map(p => ({
+        pairing_id: pairingId,
+        player_id: p.id
+      }));
+      await client.from('pairing_players').insert(pairingMembers);
+
+      // 4. Insert Hole Scores
+      const scoreRows = [];
+      selectedGroupPlayers.forEach(p => {
+        const courseHdcp = Math.round((p.handicap_index / 2) * (131 / 113) + (34.9 - 36));
         holes.forEach(h => {
-          if (groupScores[p.id] && groupScores[p.id][h.hole_number]) {
-            const courseHdcp = Math.round((p.handicap_index / 2) * (131 / 113) + (34.9 - 36));
-            const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
-            const gross = groupScores[p.id][h.hole_number];
-            totalGross += gross;
-            totalNet += (gross - strokes);
-            holesPlayed++;
-          }
+          const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
+          const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
+          scoreRows.push({
+            pairing_id: pairingId,
+            player_id: p.id,
+            hole_number: h.hole_number,
+            gross_score: gross,
+            net_score: gross - strokes,
+            strokes_received: strokes
+          });
         });
-
-        return { name: p.name, thru: holesPlayed, gross: totalGross, net: totalNet };
       });
 
-      leaderboardData.sort((a, b) => a.net - b.net);
+      const { error: scoresErr } = await client.from('scores').insert(scoreRows);
 
-      leaderboardData.forEach((row, i) => {
+      if (scoresErr) {
+        alert("Error saving scores: " + scoresErr.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Finalize Group & Attest";
+        return;
+      }
+
+      alert("Group round attested & scores saved to cloud! Loading leaderboard...");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Finalize Group & Attest";
+      switchTab('board');
+    }
+
+    async function fetchLeaderboard() {
+      const tbody = document.getElementById('leaderboard-body');
+      tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-xs text-slate-400">Loading live scores...</td></tr>';
+
+      // Pull all saved scores joined with player profiles
+      const { data: scoreData, error } = await client
+        .from('scores')
+        .select('gross_score, net_score, player_id, players(name)');
+
+      if (error || !scoreData || scoreData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-xs text-slate-400">No rounds attested yet this week.</td></tr>';
+        return;
+      }
+
+      // Aggregate totals per player
+      const aggregates = {};
+      scoreData.forEach(row => {
+        const id = row.player_id;
+        const name = row.players ? row.players.name : 'Unknown';
+        if (!aggregates[id]) {
+          aggregates[id] = { name: name, thru: 0, gross: 0, net: 0 };
+        }
+        aggregates[id].thru += 1;
+        aggregates[id].gross += row.gross_score;
+        aggregates[id].net += parseFloat(row.net_score);
+      });
+
+      const boardList = Object.values(aggregates);
+      boardList.sort((a, b) => a.net - b.net);
+
+      tbody.innerHTML = '';
+      boardList.forEach((row, i) => {
         const tr = document.createElement('tr');
         tr.className = "border-b border-slate-800 text-xs";
         tr.innerHTML = `
           <td class="py-2.5 px-2 font-bold text-slate-400">${i + 1}</td>
           <td class="py-2.5 px-2 font-medium text-white">${row.name}</td>
           <td class="py-2.5 px-1 text-center text-slate-400">${row.thru}</td>
-          <td class="py-2.5 px-1 text-center text-slate-300 font-semibold">${row.gross || '-'}</td>
-          <td class="py-2.5 px-1 text-center text-emerald-400 font-black text-sm">${row.net || '-'}</td>
-          <td class="py-2.5 px-2 text-right text-amber-400 font-bold">${FEDEX_POINTS[i] || 0}</td>
+          <td class="py-2.5 px-1 text-center text-slate-300 font-semibold">${row.gross}</td>
+          <td class="py-2.5 px-1 text-center text-emerald-400 font-black text-sm">${row.net}</td>
+          <td class="py-2.5 px-2 text-right text-amber-400 font-bold">${FEDEX_POINTS[i] || 50}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -272,93 +469,25 @@
 
     function switchTab(tab) {
       if (tab === 'scoring') {
-        document.getElementById('view-scoring').classList.remove('hidden');
+        if (selectedGroupPlayers.length > 0) {
+          document.getElementById('view-scoring').classList.remove('hidden');
+          document.getElementById('view-setup').classList.add('hidden');
+        } else {
+          document.getElementById('view-setup').classList.remove('hidden');
+          document.getElementById('view-scoring').classList.add('hidden');
+        }
         document.getElementById('view-board').classList.add('hidden');
         document.getElementById('tab-btn-scoring').className = "px-3 py-1 text-xs font-bold rounded-lg bg-emerald-700 text-white shadow";
         document.getElementById('tab-btn-board').className = "px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300";
       } else {
+        document.getElementById('view-setup').classList.add('hidden');
         document.getElementById('view-scoring').classList.add('hidden');
         document.getElementById('view-board').classList.remove('hidden');
         document.getElementById('tab-btn-board').className = "px-3 py-1 text-xs font-bold rounded-lg bg-emerald-700 text-white shadow";
         document.getElementById('tab-btn-scoring').className = "px-3 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300";
-        renderLeaderboard();
+        fetchLeaderboard();
       }
     }
-
-async function submitAttestation() {
-  const attestor = document.getElementById('attestor-select').value;
-  const fileInput = document.getElementById('scorecard-file');
-
-  if (!attestor) {
-    alert("Please select the playing partner attesting this card.");
-    return;
-  }
-
-  let photoUrl = null;
-
-  if (fileInput.files.length > 0) {
-    const file = fileInput.files[0];
-    const fileName = `week1-${Date.now()}-${file.name}`;
-    const { data, error } = await client.storage
-      .from('scorecards')
-      .upload(fileName, file);
-
-    if (error) {
-      alert("Error uploading card: " + error.message);
-      return;
-    }
-    photoUrl = fileName;
-  }
-
-  // 1. Create Pairing/Group Record
-  const { data: pairingData, error: pairingErr } = await client
-    .from('pairings')
-    .insert([{
-      week_id: 'w0000001-0000-0000-0000-000000000001',
-      group_number: 1,
-      attestor_id: attestor,
-      scorecard_photo_url: photoUrl,
-      status: 'attested'
-    }])
-    .select();
-
-  if (pairingErr) {
-    alert("Error creating round record: " + pairingErr.message);
-    return;
-  }
-
-  const pairingId = pairingData[0].id;
-
-  // 2. Insert Hole Scores for the Group
-  const scoreRows = [];
-  const activeFoursome = players.slice(0, 4);
-
-  activeFoursome.forEach(p => {
-    const courseHdcp = Math.round((p.handicap_index / 2) * (131 / 113) + (34.9 - 36));
-    holes.forEach(h => {
-      const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
-      const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
-      scoreRows.push({
-        pairing_id: pairingId,
-        player_id: p.id,
-        hole_number: h.hole_number,
-        gross_score: gross,
-        net_score: gross - strokes,
-        strokes_received: strokes
-      });
-    });
-  });
-
-  const { error: scoresErr } = await client.from('scores').insert(scoreRows);
-
-  if (scoresErr) {
-    alert("Error saving hole scores: " + scoresErr.message);
-    return;
-  }
-
-  alert("Group round attested & scores saved to database! Leaderboard updated.");
-  switchTab('board');
-}
 
     window.onload = init;
   </script>
