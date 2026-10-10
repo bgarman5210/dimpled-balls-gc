@@ -19,43 +19,88 @@
       <p id="course-header" class="text-[11px] text-emerald-200">Loading schedule...</p>
     </div>
     <div class="flex gap-1">
-      <button onclick="switchTab('scoring')" id="tab-btn-scoring" class="px-2 py-1 text-xs font-bold rounded-lg bg-emerald-700 text-white shadow">Scorer</button>
+      <button onclick="switchTab('setup')" id="tab-btn-setup" class="px-2 py-1 text-xs font-bold rounded-lg bg-emerald-700 text-white shadow">Hub</button>
+      <button onclick="switchTab('scoring')" id="tab-btn-scoring" class="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300">Scorer</button>
       <button onclick="switchTab('board')" id="tab-btn-board" class="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300">Board</button>
       <button onclick="switchTab('clubhouse')" id="tab-btn-clubhouse" class="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300">Clubhouse</button>
       <button onclick="switchTab('admin')" id="tab-btn-admin" class="px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300">Admin</button>
     </div>
   </header>
 
-  <!-- VIEW: GROUP SETUP -->
-  <main id="view-setup" class="p-4 max-w-lg mx-auto">
-    <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-4">
-      <div>
-        <h2 class="text-base font-bold text-white flex items-center gap-1.5">🏌️‍♂️ Start Group Round</h2>
-        <p class="text-xs text-slate-400">Choose tee-time slot and select 1 to 4 golfers.</p>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Starting Group / Tee Time</label>
-        <select id="setup-group-select" onchange="autoCheckSuggestedGroup(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
-          <option value="1|16:00">Group 1 • 4:00 PM</option>
-          <option value="2|16:10">Group 2 • 4:10 PM</option>
-          <option value="3|16:20">Group 3 • 4:20 PM</option>
-          <option value="4|16:30">Group 4 • 4:30 PM</option>
-          <option value="5|16:40">Group 5 • 4:40 PM</option>
-        </select>
-      </div>
-
-      <div>
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-xs font-semibold text-slate-300">Select Golfers (<span id="selected-count">0</span>/4)</label>
-          <button onclick="clearAllCheckboxes()" class="text-[10px] text-slate-400 underline hover:text-white">Clear All</button>
+  <!-- VIEW: MATCHDAY HUB (HOME PAGE) -->
+  <main id="view-setup" class="p-4 max-w-lg mx-auto space-y-4">
+    <!-- Matchday Hero Card -->
+    <div class="bg-gradient-to-br from-emerald-900/90 to-slate-800 rounded-2xl p-4 border border-emerald-600/40 shadow-xl space-y-2">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded text-[10px] font-black uppercase tracking-wider">Matchday</span>
+          <select id="hub-week-select" onchange="switchHubWeek(this.value)" class="bg-emerald-950/80 border border-emerald-600/50 rounded-lg px-2 py-0.5 text-xs font-bold text-white focus:outline-none">
+            <option value="1">Week 1</option>
+            <option value="2">Week 2</option>
+            <option value="3">Week 3</option>
+            <option value="4">Week 4</option>
+            <option value="5">Week 5</option>
+            <option value="6">Week 6</option>
+            <option value="7">Week 7</option>
+            <option value="8">Week 8</option>
+          </select>
         </div>
-        <div id="player-checklist" class="space-y-1.5 max-h-60 overflow-y-auto pr-1"></div>
+        <span id="hub-match-date" class="text-xs text-slate-300 font-medium">--</span>
       </div>
 
-      <button onclick="startGroupRound()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-xl text-sm font-bold text-white tracking-wide shadow-lg transition">
-        Confirm Group & Tee Off
-      </button>
+      <div>
+        <h2 id="hub-course-title" class="text-xl font-black text-white tracking-tight">--</h2>
+        <p id="hub-tee-subtitle" class="text-xs text-emerald-200">Blue/White Combo Tees</p>
+      </div>
+
+      <!-- Quick Ticker -->
+      <div class="pt-2 border-t border-emerald-800/60 flex justify-between text-[11px] text-slate-300">
+        <span>🏆 Low Scratch: <b id="hub-low-gross" class="text-amber-300">--</b></span>
+        <span>💎 Low Net: <b id="hub-low-net" class="text-emerald-300">--</b></span>
+      </div>
+    </div>
+
+    <!-- Grouped Foursomes (Ordered by Schedule) -->
+    <div class="space-y-3">
+      <div class="flex justify-between items-center px-1">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Scheduled Foursomes</h3>
+        <span class="text-[10px] text-slate-500">Tap card to score group</span>
+      </div>
+
+      <div id="hub-groups-container" class="space-y-2.5">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- 19th Hole Trash Talk Board -->
+    <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
+      <div class="flex justify-between items-center">
+        <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+          🗣️ 19th Hole Trash Talk
+        </h3>
+        <button onclick="fetchTrashTalk()" class="text-[10px] text-slate-400 hover:text-white">🔄 Refresh</button>
+      </div>
+
+      <!-- Post message box -->
+      <div class="space-y-2">
+        <div class="grid grid-cols-2 gap-1.5">
+          <select id="trash-from-player" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white">
+            <option value="">Your Name...</option>
+          </select>
+          <select id="trash-target-player" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white">
+            <option value="Everyone">Call Out: Everyone</option>
+          </select>
+        </div>
+        <div class="flex gap-1.5">
+          <input type="text" id="trash-message" placeholder="Talk some friendly smack..." maxlength="120" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400" />
+          <button onclick="postTrashTalk()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 rounded-lg text-xs font-bold text-white shadow">Post</button>
+        </div>
+      </div>
+
+      <!-- Feed list -->
+      <div id="trash-feed" class="space-y-2 max-h-48 overflow-y-auto pr-1 pt-1 divide-y divide-slate-800">
+        <div class="text-[11px] text-slate-500 text-center py-2">No chatter yet. Fire the first shot!</div>
+      </div>
     </div>
   </main>
 
@@ -63,7 +108,7 @@
   <main id="view-scoring" class="p-4 max-w-lg mx-auto hidden">
     <div class="flex justify-between items-center mb-3 text-xs px-1">
       <span id="active-group-tag" class="font-bold text-emerald-400 uppercase tracking-wide">Group 1 • 4:00 PM</span>
-      <button onclick="resetGroupSelection()" class="text-slate-400 underline hover:text-white">Change Group</button>
+      <button onclick="switchTab('setup')" class="text-slate-400 underline hover:text-white">Change Group</button>
     </div>
 
     <div class="bg-slate-800 rounded-xl p-3 mb-4 shadow border border-slate-700">
@@ -127,9 +172,8 @@
     </div>
   </main>
 
-  <!-- VIEW: THE CLUBHOUSE (PUBLIC STATS & STANDINGS) -->
+  <!-- VIEW: THE CLUBHOUSE -->
   <main id="view-clubhouse" class="p-4 max-w-lg mx-auto hidden space-y-4">
-    <!-- Trophy Case -->
     <div class="grid grid-cols-2 gap-2">
       <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 shadow text-center">
         <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">🎯 Season Low Scratch</span>
@@ -143,7 +187,6 @@
       </div>
     </div>
 
-    <!-- Season FedEx Cup Standings -->
     <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow">
       <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center justify-between">
         <span>🏆 FedEx Cup Standings</span>
@@ -177,12 +220,11 @@
     </div>
 
     <div id="admin-content" class="space-y-4 hidden">
-      <!-- SCORE AUDITING & CORRECTION TOOL -->
+      <!-- SCORE AUDITING -->
       <div class="bg-slate-800 rounded-xl p-4 border border-amber-500/40 shadow space-y-3">
         <h3 class="text-sm font-bold text-amber-400 flex items-center justify-between">
           <span>✏️ Scorecard Audit & Corrections</span>
         </h3>
-        <p class="text-[11px] text-slate-400">Correct any fat-fingered hole score on an attested round.</p>
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block text-[10px] text-slate-400 mb-1">Week</label>
@@ -208,19 +250,15 @@
         <div id="audit-grid" class="hidden space-y-2 pt-2 border-t border-slate-700">
           <div class="grid grid-cols-9 gap-1 text-center" id="audit-holes-header"></div>
           <div class="grid grid-cols-9 gap-1" id="audit-holes-inputs"></div>
-          <button onclick="saveAuditScoreCorrections()" class="w-full mt-2 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg text-xs font-bold text-white shadow">
-            Save Hole Corrections
-          </button>
+          <button onclick="saveAuditScoreCorrections()" class="w-full mt-2 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg text-xs font-bold text-white shadow">Save Hole Corrections</button>
         </div>
       </div>
 
       <!-- SEASON SETUP & GENERATOR -->
       <div class="bg-slate-800 rounded-xl p-4 border border-emerald-500/40 shadow space-y-3">
-        <div class="flex justify-between items-center">
-          <h3 class="text-sm font-bold text-emerald-400 flex items-center gap-1.5">⚡ Season & Schedule Engine</h3>
-          <span id="current-week-display" class="text-xs text-slate-300 font-normal">Week 1</span>
-        </div>
-        
+        <h3 class="text-sm font-bold text-emerald-400 flex items-center justify-between">
+          <span>⚡ Season & Schedule Engine</span>
+        </h3>
         <div class="space-y-2 pt-1 border-t border-slate-700">
           <div class="grid grid-cols-2 gap-2">
             <div>
@@ -249,17 +287,13 @@
           </div>
 
           <div class="pt-2 flex gap-2">
-            <button onclick="generateFullSeason(8)" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow transition">
-              Establish Full 8-Week Season
-            </button>
-            <button onclick="generateFullSeason(1)" class="py-2 px-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-slate-200">
-              Week 1 Only
-            </button>
+            <button onclick="generateFullSeason(8)" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow">Establish 8-Week Season</button>
+            <button onclick="generateFullSeason(1)" class="py-2 px-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-slate-200">Week 1 Only</button>
           </div>
         </div>
       </div>
 
-      <!-- ADD NEW LEAGUE MEMBER -->
+      <!-- ADD LEAGUE MEMBER -->
       <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
         <h3 class="text-sm font-bold text-emerald-400 flex items-center gap-1.5">➕ Add League Member</h3>
         <div class="grid grid-cols-2 gap-2">
@@ -281,11 +315,9 @@
         <button onclick="addNewPlayer()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow">Save to Roster</button>
       </div>
 
-      <!-- ROSTER & START TIME PREFERENCES -->
+      <!-- ROSTER & PREFERENCES -->
       <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
-        <div class="flex justify-between items-center">
-          <h3 class="text-sm font-bold text-white">👥 Member Time Preferences (<span id="admin-roster-count">0</span>)</h3>
-        </div>
+        <h3 class="text-sm font-bold text-white">👥 Member Time Preferences (<span id="admin-roster-count">0</span>)</h3>
         <div id="admin-roster-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
       </div>
     </div>
@@ -297,6 +329,7 @@
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let activeWeek = null;
+    let viewingWeekNum = 1;
     let activeTeeSet = null;
     let holes = [];
     let currentHoleIndex = 0;
@@ -306,21 +339,23 @@
     let activeTeeTime = "16:00";
     let groupScores = {};
     let isAdminUnlocked = false;
-    let currentWeekSuggested = {};
+    let weekSuggestedGroups = {};
     let auditScoreRecords = [];
 
     const FEDEX_POINTS = [500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50];
 
     async function init() {
       document.getElementById('season-start-date').value = new Date().toISOString().split('T')[0];
-      await loadActiveSchedule();
       await fetchPlayers();
+      await loadActiveSchedule();
       renderHoleNav();
       fetchLeaderboard();
       fetchClubhouseStats();
+      fetchTrashTalk();
     }
 
     async function loadActiveSchedule() {
+      // 1. Fetch current scheduled week
       const { data: weekData } = await client
         .from('weeks')
         .select('*, courses(name)')
@@ -329,128 +364,127 @@
 
       if (!weekData || weekData.length === 0) return;
       activeWeek = weekData[0];
+      viewingWeekNum = activeWeek.week_number;
+      document.getElementById('hub-week-select').value = viewingWeekNum;
 
-      const { data: teeData } = await client
-        .from('tee_sets')
-        .select('*')
-        .eq('course_id', activeWeek.course_id)
-        .eq('side', activeWeek.side)
+      await renderHubWeekData(viewingWeekNum);
+    }
+
+    async function switchHubWeek(weekNum) {
+      viewingWeekNum = parseInt(weekNum);
+      await renderHubWeekData(viewingWeekNum);
+    }
+
+    async function renderHubWeekData(weekNum) {
+      const { data: wData } = await client
+        .from('weeks')
+        .select('*, courses(name)')
+        .eq('week_number', weekNum)
         .limit(1);
 
-      if (teeData && teeData.length > 0) activeTeeSet = teeData[0];
+      if (!wData || wData.length === 0) return;
+      const targetWeek = wData[0];
 
-      const courseName = activeWeek.courses ? activeWeek.courses.name.replace('Golf Club', '').replace('Course', '').trim() : 'Course';
-      const teeLabel = activeTeeSet ? activeTeeSet.tee_name : 'Combo';
-      document.getElementById('course-header').textContent = `${courseName} • ${activeWeek.side} 9 (${teeLabel})`;
-      document.getElementById('current-week-display').textContent = `Week ${activeWeek.week_number} • ${activeWeek.side} 9`;
+      const { data: tData } = await client
+        .from('tee_sets')
+        .select('*')
+        .eq('course_id', targetWeek.course_id)
+        .eq('side', targetWeek.side)
+        .limit(1);
 
+      if (tData && tData.length > 0) activeTeeSet = tData[0];
+
+      // Update Hub Hero Banner
+      const cName = targetWeek.courses ? targetWeek.courses.name.replace('Golf Club', '').replace('Course', '').trim() : 'Course';
+      const tName = activeTeeSet ? activeTeeSet.tee_name : 'Combo';
+      document.getElementById('hub-match-date').textContent = targetWeek.play_date || 'Date TBD';
+      document.getElementById('hub-course-title').textContent = `${cName} (${targetWeek.side} 9)`;
+      document.getElementById('hub-tee-subtitle').textContent = `${tName} • Par ${activeTeeSet ? activeTeeSet.par : 36}`;
+      document.getElementById('course-header').textContent = `${cName} • ${targetWeek.side} 9`;
+
+      // Fetch Holes
       const { data: holeData } = await client
         .from('course_holes')
         .select('*')
-        .eq('course_id', activeWeek.course_id)
-        .eq('side', activeWeek.side)
+        .eq('course_id', targetWeek.course_id)
+        .eq('side', targetWeek.side)
         .order('hole_number', { ascending: true });
 
       holes = holeData || [];
-      await loadWeekPairingSuggestions(activeWeek.week_number);
+
+      // Render Suggested Foursomes in Scheduled Order
+      await renderHubFoursomes(weekNum);
     }
 
-    async function fetchPlayers() {
-      const { data } = await client
-        .from('players')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-      allPlayers = data || [];
-      renderChecklist();
-      renderAdminRoster();
-    }
+    async function renderHubFoursomes(weekNum) {
+      const container = document.getElementById('hub-groups-container');
+      container.innerHTML = '<div class="text-xs text-slate-500 py-4 text-center">Loading foursomes...</div>';
 
-    function renderChecklist() {
-      const container = document.getElementById('player-checklist');
-      container.innerHTML = '';
-      allPlayers.forEach(p => {
-        const prefTag = p.tee_time_preference === 'early' ? '🌅 Early' : (p.tee_time_preference === 'late' ? '🌇 Late' : '');
-        const div = document.createElement('label');
-        div.className = "flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-700/60 cursor-pointer hover:bg-slate-750";
-        div.innerHTML = `
-          <div class="flex items-center gap-2">
-            <input type="checkbox" value="${p.id}" id="chk-${p.id}" onchange="updateSelectedCount()" class="player-checkbox w-4 h-4 rounded text-emerald-600 bg-slate-800 border-slate-600 focus:ring-emerald-500" />
-            <span class="text-sm font-medium text-white">${p.name}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            ${prefTag ? `<span class="text-[10px] text-amber-300/80">${prefTag}</span>` : ''}
-            <span class="text-xs text-slate-400">HDCP ${p.handicap_index}</span>
+      const { data: pairRows } = await client
+        .from('weekly_suggested_pairings')
+        .select('*, players(*)')
+        .eq('week_number', parseInt(weekNum))
+        .order('group_number');
+
+      if (!pairRows || pairRows.length === 0) {
+        container.innerHTML = `
+          <div class="bg-slate-800/80 p-4 rounded-xl text-center border border-slate-700/60">
+            <p class="text-xs text-slate-400">No foursomes generated for Week ${weekNum} yet.</p>
+            <p class="text-[11px] text-emerald-400 mt-1">Admin can establish pairings in the Admin tab.</p>
           </div>
         `;
-        container.appendChild(div);
-      });
-    }
-
-    function updateSelectedCount() {
-      const checked = document.querySelectorAll('.player-checkbox:checked');
-      document.getElementById('selected-count').textContent = checked.length;
-      if (checked.length > 4) {
-        alert("Maximum 4 golfers per group.");
-        event.target.checked = false;
-        document.getElementById('selected-count').textContent = 4;
-      }
-    }
-
-    function clearAllCheckboxes() {
-      document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = false);
-      document.getElementById('selected-count').textContent = 0;
-    }
-
-    async function loadWeekPairingSuggestions(weekNum) {
-      currentWeekSuggested = {};
-      const { data } = await client
-        .from('weekly_suggested_pairings')
-        .select('*')
-        .eq('week_number', parseInt(weekNum));
-
-      if (data && data.length > 0) {
-        data.forEach(row => {
-          if (!currentWeekSuggested[row.group_number]) currentWeekSuggested[row.group_number] = [];
-          currentWeekSuggested[row.group_number].push(row.player_id);
-        });
-        autoCheckSuggestedGroup("1|16:00");
-      }
-    }
-
-    function autoCheckSuggestedGroup(groupVal) {
-      const groupNum = parseInt(groupVal.split('|')[0]);
-      clearAllCheckboxes();
-      if (currentWeekSuggested[groupNum]) {
-        currentWeekSuggested[groupNum].forEach(pid => {
-          const el = document.getElementById(`chk-${pid}`);
-          if (el) el.checked = true;
-        });
-        document.getElementById('selected-count').textContent = currentWeekSuggested[groupNum].length;
-      }
-    }
-
-    function calculateCourseHdcp(handicapIndex) {
-      if (!activeTeeSet) return Math.round(handicapIndex / 2);
-      const slope = parseFloat(activeTeeSet.nine_hole_slope) || 113;
-      const rating = parseFloat(activeTeeSet.nine_hole_rating) || 36.0;
-      const par = activeTeeSet.par || 36;
-      return Math.round((handicapIndex / 2) * (slope / 113) + (rating - par));
-    }
-
-    function startGroupRound() {
-      const checkedBoxes = Array.from(document.querySelectorAll('.player-checkbox:checked'));
-      if (checkedBoxes.length === 0) {
-        alert("Please select at least 1 player to begin scoring.");
         return;
       }
 
-      const selectedIds = checkedBoxes.map(cb => cb.value);
-      selectedGroupPlayers = allPlayers.filter(p => selectedIds.includes(p.id));
+      weekSuggestedGroups = {};
+      pairRows.forEach(r => {
+        if (!weekSuggestedGroups[r.group_number]) {
+          weekSuggestedGroups[r.group_number] = {
+            teeTime: r.tee_time,
+            players: []
+          };
+        }
+        if (r.players) weekSuggestedGroups[r.group_number].players.push(r.players);
+      });
 
-      const groupSelection = document.getElementById('setup-group-select').value.split('|');
-      activeGroupNum = parseInt(groupSelection[0]);
-      activeTeeTime = groupSelection[1];
+      container.innerHTML = '';
+      Object.keys(weekSuggestedGroups).sort((a,b) => a-b).forEach(gNum => {
+        const group = weekSuggestedGroups[gNum];
+        const card = document.createElement('div');
+        card.className = "bg-slate-800 rounded-xl p-3 border border-slate-700/80 shadow hover:border-emerald-500/50 transition cursor-pointer";
+        
+        let playerListHtml = '';
+        group.players.forEach(p => {
+          playerListHtml += `
+            <div class="flex items-center justify-between py-1 border-b border-slate-700/40 last:border-0">
+              <span class="text-xs font-semibold text-white">${p.name}</span>
+              <span class="text-[10px] text-slate-400">HDCP ${p.handicap_index}</span>
+            </div>
+          `;
+        });
+
+        card.innerHTML = `
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-black text-emerald-400 uppercase tracking-wide">Group ${gNum} • ${group.teeTime}</span>
+            <button onclick="launchScoringForGroup(${gNum})" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[11px] font-bold shadow">
+              Score Group 🏌️‍♂️
+            </button>
+          </div>
+          <div class="bg-slate-900/60 rounded-lg p-2 space-y-0.5">
+            ${playerListHtml}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function launchScoringForGroup(groupNum) {
+      const group = weekSuggestedGroups[groupNum];
+      if (!group || !group.players.length) return;
+
+      selectedGroupPlayers = group.players;
+      activeGroupNum = groupNum;
+      activeTeeTime = group.teeTime;
 
       document.getElementById('active-group-tag').textContent = `Group ${activeGroupNum} • ${activeTeeTime}`;
 
@@ -463,17 +497,102 @@
         attestSelect.appendChild(opt);
       });
 
-      document.getElementById('view-setup').classList.add('hidden');
-      document.getElementById('view-scoring').classList.remove('hidden');
+      switchTab('scoring');
       renderCurrentHole();
     }
 
-    function resetGroupSelection() {
-      if (confirm("Return to group selection? Any unfinalized scores for this group will be cleared.")) {
-        groupScores = {};
-        document.getElementById('view-scoring').classList.add('hidden');
-        document.getElementById('view-setup').classList.remove('hidden');
+    async function fetchPlayers() {
+      const { data } = await client
+        .from('players')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      allPlayers = data || [];
+      renderAdminRoster();
+      populateTrashPlayerSelects();
+    }
+
+    function populateTrashPlayerSelects() {
+      const fromSel = document.getElementById('trash-from-player');
+      const toSel = document.getElementById('trash-target-player');
+      fromSel.innerHTML = '<option value="">Your Name...</option>';
+      toSel.innerHTML = '<option value="Everyone">Call Out: Everyone</option>';
+
+      allPlayers.forEach(p => {
+        const o1 = document.createElement('option');
+        o1.value = p.id;
+        o1.textContent = p.name;
+        fromSel.appendChild(o1);
+
+        const o2 = document.createElement('option');
+        o2.value = p.name;
+        o2.textContent = `Call Out: ${p.name}`;
+        toSel.appendChild(o2);
+      });
+    }
+
+    // --- TRASH TALK FEED ---
+    async function fetchTrashTalk() {
+      const { data, error } = await client
+        .from('trash_talk')
+        .select('*, players(name)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      const feed = document.getElementById('trash-feed');
+      if (error || !data || data.length === 0) {
+        feed.innerHTML = '<div class="text-[11px] text-slate-500 text-center py-2">No chatter yet. Fire the first shot!</div>';
+        return;
       }
+
+      feed.innerHTML = '';
+      data.forEach(t => {
+        const item = document.createElement('div');
+        item.className = "py-2";
+        const sender = t.players ? t.players.name : 'Golfer';
+        item.innerHTML = `
+          <div class="flex justify-between items-baseline text-[10px]">
+            <span class="font-bold text-amber-400">${sender} <span class="text-slate-400 font-normal">→ ${t.target_name}</span></span>
+            <span class="text-slate-500">${new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <p class="text-xs text-slate-200 mt-0.5">${t.message}</p>
+        `;
+        feed.appendChild(item);
+      });
+    }
+
+    async function postTrashTalk() {
+      const fromId = document.getElementById('trash-from-player').value;
+      const targetName = document.getElementById('trash-target-player').value;
+      const msg = document.getElementById('trash-message').value.trim();
+
+      if (!fromId) {
+        alert("Please select who you are first!");
+        return;
+      }
+      if (!msg) return;
+
+      const { error } = await client.from('trash_talk').insert([{
+        player_id: fromId,
+        target_name: targetName,
+        message: msg
+      }]);
+
+      if (error) {
+        alert("Error posting trash talk: " + error.message);
+        return;
+      }
+
+      document.getElementById('trash-message').value = '';
+      await fetchTrashTalk();
+    }
+
+    function calculateCourseHdcp(handicapIndex) {
+      if (!activeTeeSet) return Math.round(handicapIndex / 2);
+      const slope = parseFloat(activeTeeSet.nine_hole_slope) || 113;
+      const rating = parseFloat(activeTeeSet.nine_hole_rating) || 36.0;
+      const par = activeTeeSet.par || 36;
+      return Math.round((handicapIndex / 2) * (slope / 113) + (rating - par));
     }
 
     function renderHoleNav() {
@@ -664,7 +783,6 @@
       });
     }
 
-    // --- THE CLUBHOUSE PUBLIC STATS & STANDINGS ---
     async function fetchClubhouseStats() {
       const { data: allScores } = await client
         .from('scores')
@@ -672,37 +790,34 @@
 
       if (!allScores || allScores.length === 0) return;
 
-      // Group by player & pairing to find round totals
       const roundMap = {};
       allScores.forEach(s => {
         const key = `${s.player_id}_${s.pairing_id}`;
-        if (!roundMap[key]) {
-          roundMap[key] = { name: s.players?.name || 'Unknown', gross: 0, net: 0, holes: 0 };
-        }
+        if (!roundMap[key]) roundMap[key] = { name: s.players?.name || 'Unknown', gross: 0, net: 0, holes: 0 };
         roundMap[key].gross += s.gross_score;
         roundMap[key].net += parseFloat(s.net_score);
         roundMap[key].holes += 1;
       });
 
-      // Filter only completed 9-hole rounds
-      const completedRounds = Object.values(roundMap).filter(r => r.holes === 9);
+      const completed = Object.values(roundMap).filter(r => r.holes === 9);
 
-      if (completedRounds.length > 0) {
-        completedRounds.sort((a, b) => a.gross - b.gross);
-        document.getElementById('stat-low-gross').textContent = completedRounds[0].gross;
-        document.getElementById('stat-low-gross-name').textContent = completedRounds[0].name;
+      if (completed.length > 0) {
+        completed.sort((a, b) => a.gross - b.gross);
+        document.getElementById('stat-low-gross').textContent = completed[0].gross;
+        document.getElementById('stat-low-gross-name').textContent = completed[0].name;
+        document.getElementById('hub-low-gross').textContent = `${completed[0].gross} (${completed[0].name.split(' ')[0]})`;
 
-        completedRounds.sort((a, b) => a.net - b.net);
-        document.getElementById('stat-low-net').textContent = completedRounds[0].net;
-        document.getElementById('stat-low-net-name').textContent = completedRounds[0].name;
+        completed.sort((a, b) => a.net - b.net);
+        document.getElementById('stat-low-net').textContent = completed[0].net;
+        document.getElementById('stat-low-net-name').textContent = completed[0].name;
+        document.getElementById('hub-low-net').textContent = `${completed[0].net} (${completed[0].name.split(' ')[0]})`;
       }
 
-      // Aggregate cumulative FedEx Points
       const playerTotals = {};
-      completedRounds.forEach(r => {
+      completed.forEach(r => {
         if (!playerTotals[r.name]) playerTotals[r.name] = { rounds: 0, pts: 0 };
         playerTotals[r.name].rounds += 1;
-        playerTotals[r.name].pts += 100; // baseline points accumulation
+        playerTotals[r.name].pts += 100;
       });
 
       const standings = Object.entries(playerTotals).map(([name, data]) => ({ name, ...data }));
@@ -723,7 +838,7 @@
       });
     }
 
-    // --- ADMIN ENGINE & SCORE AUDIT ---
+    // --- ADMIN ENGINE ---
     function unlockAdmin() {
       const pin = document.getElementById('admin-pin').value;
       if (pin === '2204') {
@@ -743,16 +858,13 @@
       document.getElementById('audit-grid').classList.add('hidden');
 
       if (!weekData || weekData.length === 0) return;
-      const weekId = weekData[0].id;
-
-      const { data: pairingData } = await client.from('pairings').select('id').eq('week_id', weekId);
-      if (!pairingData || pairingData.length === 0) return;
-      const pairingIds = pairingData.map(p => p.id);
+      const { data: pairings } = await client.from('pairings').select('id').eq('week_id', weekData[0].id);
+      if (!pairings || pairings.length === 0) return;
 
       const { data: scores } = await client
         .from('scores')
         .select('player_id, players(name)')
-        .in('pairing_id', pairingIds);
+        .in('pairing_id', pairings.map(p => p.id));
 
       const seen = new Set();
       scores?.forEach(s => {
@@ -774,17 +886,15 @@
       const weekNum = parseInt(document.getElementById('audit-week-select').value);
       const { data: weekData } = await client.from('weeks').select('id').eq('week_number', weekNum).limit(1);
       const { data: pairings } = await client.from('pairings').select('id').eq('week_id', weekData[0].id);
-      const pairingIds = pairings.map(p => p.id);
 
       const { data: scores } = await client
         .from('scores')
         .select('*')
         .eq('player_id', playerId)
-        .in('pairing_id', pairingIds)
+        .in('pairing_id', pairings.map(p => p.id))
         .order('hole_number');
 
       auditScoreRecords = scores || [];
-
       const header = document.getElementById('audit-holes-header');
       const inputs = document.getElementById('audit-holes-inputs');
       header.innerHTML = '';
@@ -812,13 +922,10 @@
         const inputVal = parseInt(document.getElementById(`audit-score-${s.id}`).value);
         if (!isNaN(inputVal) && inputVal !== s.gross_score) {
           const newNet = inputVal - s.strokes_received;
-          await client
-            .from('scores')
-            .update({ gross_score: inputVal, net_score: newNet })
-            .eq('id', s.id);
+          await client.from('scores').update({ gross_score: inputVal, net_score: newNet }).eq('id', s.id);
         }
       }
-      alert("Hole corrections saved! Recalculating Leaderboard...");
+      alert("Hole corrections saved!");
       fetchLeaderboard();
       fetchClubhouseStats();
     }
@@ -828,30 +935,27 @@
       const hdcp = parseFloat(document.getElementById('new-player-hdcp').value);
       const email = document.getElementById('new-player-email').value.trim();
       const phone = document.getElementById('new-player-phone').value.trim();
+      const pref = document.getElementById('new-player-pref').value;
 
       if (!name || isNaN(hdcp)) {
-        alert("Please provide at least a Name and starting Handicap Index.");
+        alert("Please provide at least a Name and Handicap Index.");
         return;
       }
 
-      const { error } = await client.from('players').insert([{
+      await client.from('players').insert([{
         name,
         handicap_index: hdcp,
         email: email || null,
         phone: phone || null,
-        tee_time_preference: 'no_preference',
+        tee_time_preference: pref,
         is_active: true
       }]);
-
-      if (error) {
-        alert("Error adding player: " + error.message);
-        return;
-      }
 
       document.getElementById('new-player-name').value = '';
       document.getElementById('new-player-hdcp').value = '';
       document.getElementById('new-player-email').value = '';
       document.getElementById('new-player-phone').value = '';
+      document.getElementById('new-player-pref').value = 'no_preference';
 
       alert(`Added ${name} to roster!`);
       await fetchPlayers();
@@ -984,7 +1088,7 @@
         if (el) el.classList.add('hidden');
       });
 
-      ['scoring', 'board', 'clubhouse', 'admin'].forEach(t => {
+      ['setup', 'scoring', 'board', 'clubhouse', 'admin'].forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
         if (btn) btn.className = "px-2 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300";
       });
@@ -992,11 +1096,14 @@
       const activeBtn = document.getElementById(`tab-btn-${tab}`);
       if (activeBtn) activeBtn.className = "px-2 py-1 text-xs font-bold rounded-lg bg-emerald-700 text-white shadow";
 
-      if (tab === 'scoring') {
+      if (tab === 'setup') {
+        document.getElementById('view-setup').classList.remove('hidden');
+        renderHubWeekData(viewingWeekNum);
+      } else if (tab === 'scoring') {
         if (selectedGroupPlayers.length > 0) {
           document.getElementById('view-scoring').classList.remove('hidden');
         } else {
-          document.getElementById('view-setup').classList.remove('hidden');
+          switchTab('setup');
         }
       } else if (tab === 'board') {
         document.getElementById('view-board').classList.remove('hidden');
