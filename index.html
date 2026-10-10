@@ -16,7 +16,7 @@
       <h1 class="text-xl font-black tracking-tight text-white flex items-center gap-1.5">
         ⛳ Dimpled Balls <span class="text-emerald-400 text-sm font-semibold">GC</span>
       </h1>
-      <p id="course-header" class="text-xs text-emerald-200">Morgan Creek • Blue/White (Front 9)</p>
+      <p id="course-header" class="text-xs text-emerald-200">Loading schedule...</p>
     </div>
     <div class="flex gap-1.5">
       <button onclick="switchTab('scoring')" id="tab-btn-scoring" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-700 text-white shadow">Scorer</button>
@@ -35,7 +35,7 @@
 
       <div>
         <label class="block text-xs font-semibold text-slate-300 mb-1">Starting Group / Tee Time</label>
-        <select id="setup-group-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+        <select id="setup-group-select" onchange="autoCheckSuggestedGroup(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
           <option value="1|16:00">Group 1 • 4:00 PM</option>
           <option value="2|16:10">Group 2 • 4:10 PM</option>
           <option value="3|16:20">Group 3 • 4:20 PM</option>
@@ -45,7 +45,10 @@
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-2">Select Golfers (<span id="selected-count">0</span>/4)</label>
+        <div class="flex justify-between items-center mb-2">
+          <label class="text-xs font-semibold text-slate-300">Select Golfers (<span id="selected-count">0</span>/4)</label>
+          <button onclick="clearAllCheckboxes()" class="text-[10px] text-slate-400 underline hover:text-white">Clear All</button>
+        </div>
         <div id="player-checklist" class="space-y-1.5 max-h-60 overflow-y-auto pr-1"></div>
       </div>
 
@@ -125,38 +128,98 @@
 
   <!-- VIEW: ADMIN PANEL -->
   <main id="view-admin" class="p-4 max-w-lg mx-auto hidden">
-    <!-- Passcode Gate -->
     <div id="admin-gate" class="bg-slate-800 rounded-xl p-6 border border-slate-700 shadow text-center space-y-4">
       <h2 class="text-base font-bold text-white">🔒 Admin Authentication</h2>
-      <p class="text-xs text-slate-400">Enter commissioner PIN to manage roster and settings.</p>
+      <p class="text-xs text-slate-400">Enter commissioner PIN to manage season and schedule.</p>
       <input type="password" id="admin-pin" maxlength="6" placeholder="Enter PIN" class="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-center text-lg tracking-widest text-white w-40 focus:outline-none focus:border-emerald-500" />
       <div>
         <button onclick="unlockAdmin()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-bold text-white shadow">Unlock</button>
       </div>
     </div>
 
-    <!-- Authenticated Admin Content -->
     <div id="admin-content" class="space-y-4 hidden">
-      <!-- Add New Member Form -->
-      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
-        <h3 class="text-sm font-bold text-emerald-400 flex items-center gap-1.5">➕ Add League Member</h3>
-        <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="new-player-name" placeholder="Full Name" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-          <input type="number" step="0.1" id="new-player-hdcp" placeholder="Index (e.g. 14.2)" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+      <!-- SEASON SETUP & GENERATOR -->
+      <div class="bg-slate-800 rounded-xl p-4 border border-emerald-500/40 shadow space-y-3">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-bold text-emerald-400 flex items-center gap-1.5">⚡ Season & Schedule Engine</h3>
+          <span id="current-week-display" class="text-xs text-slate-300 font-normal">Week 1</span>
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <input type="email" id="new-player-email" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
-          <input type="tel" id="new-player-phone" placeholder="Phone" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
+        
+        <div class="space-y-2 pt-1 border-t border-slate-700">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">League Start Date</label>
+              <input type="date" id="season-start-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Season Course</label>
+              <select id="season-course-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                <option value="c0000001-0000-0000-0000-000000000001">Morgan Creek (Blue/White)</option>
+                <option value="c0000005-0000-0000-0000-000000000005">Lincoln Hills Orchard (Gold)</option>
+                <option value="c0000006-0000-0000-0000-000000000006">Lincoln Hills Hills (Gold)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <label class="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
+              <input type="checkbox" id="season-same-course" checked class="w-3.5 h-3.5 rounded text-emerald-600 bg-slate-900 border-slate-700" />
+              <span>Same Course all 8 Weeks</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
+              <input type="checkbox" id="season-alternate-sides" checked class="w-3.5 h-3.5 rounded text-emerald-600 bg-slate-900 border-slate-700" />
+              <span>Alternate Front/Back 9</span>
+            </label>
+          </div>
+
+          <div class="pt-2 flex gap-2">
+            <button onclick="generateFullSeason(8)" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow transition">
+              Establish Full 8-Week Season
+            </button>
+            <button onclick="generateFullSeason(1)" class="py-2 px-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-slate-200">
+              Week 1 Only
+            </button>
+          </div>
         </div>
-        <button onclick="addNewPlayer()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow">Save to Roster</button>
       </div>
 
-      <!-- Member Roster Manager -->
+      <!-- WEEKLY SCHEDULE INSPECTOR & PAIRINGS REPORT -->
+      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
+        <h3 class="text-sm font-bold text-white flex items-center justify-between">
+          <span>📋 Week Schedule & Foursome Report</span>
+        </h3>
+        <div class="flex gap-2">
+          <select id="admin-week-select" onchange="loadWeekReport(this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+            <option value="1">Week 1</option>
+            <option value="2">Week 2</option>
+            <option value="3">Week 3</option>
+            <option value="4">Week 4</option>
+            <option value="5">Week 5</option>
+            <option value="6">Week 6</option>
+            <option value="7">Week 7</option>
+            <option value="8">Week 8</option>
+          </select>
+          <button onclick="reshuffleWeekFoursomes()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded-lg text-slate-200">
+            🎲 Re-Shuffle
+          </button>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Email Notice Preview</span>
+            <button onclick="copyEmailReport()" class="text-[10px] text-emerald-400 underline font-bold">Copy to Clipboard</button>
+          </div>
+          <textarea id="email-report-area" rows="7" readonly class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-[11px] font-mono text-emerald-300 select-all"></textarea>
+        </div>
+      </div>
+
+      <!-- MEMBER ROSTER & TIME PREFERENCES -->
       <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
         <div class="flex justify-between items-center">
-          <h3 class="text-sm font-bold text-white">📋 Active Roster (<span id="admin-roster-count">0</span>)</h3>
+          <h3 class="text-sm font-bold text-white">👥 Member Time Preferences (<span id="admin-roster-count">0</span>)</h3>
         </div>
-        <div id="admin-roster-list" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+        <p class="text-[11px] text-slate-400">Set golfer start preferences to prioritize early vs. late starting groups.</p>
+        <div id="admin-roster-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
       </div>
     </div>
   </main>
@@ -166,6 +229,8 @@
     const SUPABASE_KEY = "sb_publishable_WHgYGudqf_qMKG7m2e02nw_ZaFW9Q2s";
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    let activeWeek = null;
+    let activeTeeSet = null;
     let holes = [];
     let currentHoleIndex = 0;
     let allPlayers = [];
@@ -174,20 +239,52 @@
     let activeTeeTime = "16:00";
     let groupScores = {};
     let isAdminUnlocked = false;
+    let currentWeekSuggested = {};
 
     const FEDEX_POINTS = [500, 300, 190, 135, 110, 100, 90, 85, 80, 75, 70, 65, 60, 55, 50];
 
     async function init() {
-      const { data: holeData } = await client
-        .from('course_holes')
-        .select('*')
-        .eq('side', 'Front')
-        .order('hole_number', { ascending: true });
-      holes = holeData || [];
-
+      // Set default date to today in wizard
+      document.getElementById('season-start-date').value = new Date().toISOString().split('T')[0];
+      await loadActiveSchedule();
       await fetchPlayers();
       renderHoleNav();
       fetchLeaderboard();
+    }
+
+    async function loadActiveSchedule() {
+      const { data: weekData } = await client
+        .from('weeks')
+        .select('*, courses(name)')
+        .order('week_number', { ascending: true })
+        .limit(1);
+
+      if (!weekData || weekData.length === 0) return;
+      activeWeek = weekData[0];
+
+      const { data: teeData } = await client
+        .from('tee_sets')
+        .select('*')
+        .eq('course_id', activeWeek.course_id)
+        .eq('side', activeWeek.side)
+        .limit(1);
+
+      if (teeData && teeData.length > 0) activeTeeSet = teeData[0];
+
+      const courseName = activeWeek.courses ? activeWeek.courses.name.replace('Golf Club', '').replace('Course', '').trim() : 'Course';
+      const teeLabel = activeTeeSet ? activeTeeSet.tee_name : 'Combo';
+      document.getElementById('course-header').textContent = `${courseName} • ${activeWeek.side} 9 (${teeLabel})`;
+      document.getElementById('current-week-display').textContent = `Week ${activeWeek.week_number} • ${activeWeek.side} 9`;
+
+      const { data: holeData } = await client
+        .from('course_holes')
+        .select('*')
+        .eq('course_id', activeWeek.course_id)
+        .eq('side', activeWeek.side)
+        .order('hole_number', { ascending: true });
+
+      holes = holeData || [];
+      await loadWeekPairingSuggestions(activeWeek.week_number);
     }
 
     async function fetchPlayers() {
@@ -205,14 +302,18 @@
       const container = document.getElementById('player-checklist');
       container.innerHTML = '';
       allPlayers.forEach(p => {
+        const prefTag = p.tee_time_preference === 'early' ? '🌅 Early' : (p.tee_time_preference === 'late' ? '🌇 Late' : '');
         const div = document.createElement('label');
         div.className = "flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-700/60 cursor-pointer hover:bg-slate-750";
         div.innerHTML = `
           <div class="flex items-center gap-2">
-            <input type="checkbox" value="${p.id}" onchange="updateSelectedCount()" class="player-checkbox w-4 h-4 rounded text-emerald-600 bg-slate-800 border-slate-600 focus:ring-emerald-500" />
+            <input type="checkbox" value="${p.id}" id="chk-${p.id}" onchange="updateSelectedCount()" class="player-checkbox w-4 h-4 rounded text-emerald-600 bg-slate-800 border-slate-600 focus:ring-emerald-500" />
             <span class="text-sm font-medium text-white">${p.name}</span>
           </div>
-          <span class="text-xs text-slate-400">HDCP ${p.handicap_index}</span>
+          <div class="flex items-center gap-2">
+            ${prefTag ? `<span class="text-[10px] text-amber-300/80">${prefTag}</span>` : ''}
+            <span class="text-xs text-slate-400">HDCP ${p.handicap_index}</span>
+          </div>
         `;
         container.appendChild(div);
       });
@@ -226,6 +327,47 @@
         event.target.checked = false;
         document.getElementById('selected-count').textContent = 4;
       }
+    }
+
+    function clearAllCheckboxes() {
+      document.querySelectorAll('.player-checkbox').forEach(cb => cb.checked = false);
+      document.getElementById('selected-count').textContent = 0;
+    }
+
+    async function loadWeekPairingSuggestions(weekNum) {
+      currentWeekSuggested = {};
+      const { data } = await client
+        .from('weekly_suggested_pairings')
+        .select('*')
+        .eq('week_number', parseInt(weekNum));
+
+      if (data && data.length > 0) {
+        data.forEach(row => {
+          if (!currentWeekSuggested[row.group_number]) currentWeekSuggested[row.group_number] = [];
+          currentWeekSuggested[row.group_number].push(row.player_id);
+        });
+        autoCheckSuggestedGroup("1|16:00");
+      }
+    }
+
+    function autoCheckSuggestedGroup(groupVal) {
+      const groupNum = parseInt(groupVal.split('|')[0]);
+      clearAllCheckboxes();
+      if (currentWeekSuggested[groupNum]) {
+        currentWeekSuggested[groupNum].forEach(pid => {
+          const el = document.getElementById(`chk-${pid}`);
+          if (el) el.checked = true;
+        });
+        document.getElementById('selected-count').textContent = currentWeekSuggested[groupNum].length;
+      }
+    }
+
+    function calculateCourseHdcp(handicapIndex) {
+      if (!activeTeeSet) return Math.round(handicapIndex / 2);
+      const slope = parseFloat(activeTeeSet.nine_hole_slope) || 113;
+      const rating = parseFloat(activeTeeSet.nine_hole_rating) || 36.0;
+      const par = activeTeeSet.par || 36;
+      return Math.round((handicapIndex / 2) * (slope / 113) + (rating - par));
     }
 
     function startGroupRound() {
@@ -297,7 +439,7 @@
       container.innerHTML = '';
 
       selectedGroupPlayers.forEach(player => {
-        const courseHdcp = Math.round((player.handicap_index / 2) * (131 / 113) + (34.9 - 36));
+        const courseHdcp = calculateCourseHdcp(player.handicap_index);
         const strokesOnHole = courseHdcp >= h.league_stroke_rank ? 1 : 0;
 
         if (!groupScores[player.id]) groupScores[player.id] = {};
@@ -328,7 +470,7 @@
     function adjustScore(playerId, delta) {
       const h = holes[currentHoleIndex];
       const player = selectedGroupPlayers.find(p => p.id === playerId);
-      const courseHdcp = Math.round((player.handicap_index / 2) * (131 / 113) + (34.9 - 36));
+      const courseHdcp = calculateCourseHdcp(player.handicap_index);
       const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
 
       let score = (groupScores[playerId][h.hole_number] || h.par) + delta;
@@ -355,7 +497,7 @@
       let photoUrl = null;
       if (fileInput.files.length > 0) {
         const file = fileInput.files[0];
-        const fileName = `week1-g${activeGroupNum}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        const fileName = `week${activeWeek.week_number}-g${activeGroupNum}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
         const { data, error } = await client.storage.from('scorecards').upload(fileName, file);
         if (error) {
           alert("Error uploading card: " + error.message);
@@ -366,13 +508,10 @@
         photoUrl = fileName;
       }
 
-      const { data: weekData } = await client.from('weeks').select('id').eq('week_number', 1).limit(1);
-      const weekId = weekData[0].id;
-
       const { data: pairingData, error: pairingErr } = await client
         .from('pairings')
         .insert([{
-          week_id: weekId,
+          week_id: activeWeek.id,
           group_number: activeGroupNum,
           tee_time: activeTeeTime,
           attestor_id: attestor,
@@ -393,7 +532,7 @@
 
       const scoreRows = [];
       selectedGroupPlayers.forEach(p => {
-        const courseHdcp = Math.round((p.handicap_index / 2) * (131 / 113) + (34.9 - 36));
+        const courseHdcp = calculateCourseHdcp(p.handicap_index);
         holes.forEach(h => {
           const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
           const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
@@ -457,16 +596,198 @@
       });
     }
 
-    // --- ADMIN FUNCTIONS ---
+    // --- ADMIN ENGINE & FOURSOME GENERATOR ---
     function unlockAdmin() {
       const pin = document.getElementById('admin-pin').value;
       if (pin === '2204') {
         isAdminUnlocked = true;
         document.getElementById('admin-gate').classList.add('hidden');
         document.getElementById('admin-content').classList.remove('hidden');
+        loadWeekReport(1);
       } else {
         alert("Incorrect PIN.");
       }
+    }
+
+    function generateFoursomesByPreference(playersList) {
+      // Split into 3 preference buckets
+      let early = playersList.filter(p => p.tee_time_preference === 'early');
+      let late = playersList.filter(p => p.tee_time_preference === 'late');
+      let flex = playersList.filter(p => p.tee_time_preference === 'no_preference' || !p.tee_time_preference);
+
+      // Randomize within tiers to mix up weekly pairings
+      early = early.sort(() => 0.5 - Math.random());
+      late = late.sort(() => 0.5 - Math.random());
+      flex = flex.sort(() => 0.5 - Math.random());
+
+      // Early fill from top; Late fill from bottom; Flex fill middle
+      const orderedQueue = [...early, ...flex, ...late];
+
+      // Partition into groups of 4
+      const groups = [];
+      const times = ["4:00 PM", "4:10 PM", "4:20 PM", "4:30 PM", "4:40 PM"];
+
+      for (let g = 0; g < 5; g++) {
+        const groupMembers = orderedQueue.slice(g * 4, (g * 4) + 4);
+        if (groupMembers.length > 0) {
+          groups.push({
+            groupNumber: g + 1,
+            teeTime: times[g],
+            players: groupMembers
+          });
+        }
+      }
+      return groups;
+    }
+
+    async function generateFullSeason(totalWeeks) {
+      const startDateStr = document.getElementById('season-start-date').value;
+      if (!startDateStr) {
+        alert("Please select a League Start Date.");
+        return;
+      }
+
+      const courseId = document.getElementById('season-course-select').value;
+      const sameCourse = document.getElementById('season-same-course').checked;
+      const altSides = document.getElementById('season-alternate-sides').checked;
+
+      const { data: seasonData } = await client.from('seasons').select('id').eq('is_active', true).limit(1);
+      const seasonId = seasonData[0].id;
+
+      const startDate = new Date(startDateStr + 'T12:00:00');
+      const sides = ['Front', 'Back'];
+
+      // Clear previous suggestions for these weeks
+      await client.from('weekly_suggested_pairings').delete().eq('season_id', seasonId);
+
+      for (let w = 1; w <= totalWeeks; w++) {
+        const playDate = new Date(startDate);
+        playDate.setDate(playDate.getDate() + ((w - 1) * 7));
+        const playDateStr = playDate.toISOString().split('T')[0];
+
+        const side = altSides ? sides[(w - 1) % 2] : 'Front';
+
+        // Retrieve side-specific tee set
+        const { data: teeData } = await client
+          .from('tee_sets')
+          .select('id')
+          .eq('course_id', courseId)
+          .eq('side', side)
+          .limit(1);
+
+        const teeSetId = teeData && teeData.length > 0 ? teeData[0].id : null;
+
+        // Upsert Week
+        await client.from('weeks').upsert({
+          season_id: seasonId,
+          week_number: w,
+          play_date: playDateStr,
+          course_id: courseId,
+          tee_set_id: teeSetId,
+          side: side
+        });
+
+        // Generate and persist suggested foursomes for this week
+        const weeklyGroups = generateFoursomesByPreference(allPlayers);
+        const rows = [];
+        weeklyGroups.forEach(g => {
+          g.players.forEach(p => {
+            rows.push({
+              season_id: seasonId,
+              week_number: w,
+              group_number: g.groupNumber,
+              tee_time: g.teeTime,
+              player_id: p.id
+            });
+          });
+        });
+
+        await client.from('weekly_suggested_pairings').insert(rows);
+      }
+
+      alert(`Successfully established ${totalWeeks} week schedule and randomized foursomes!`);
+      location.reload();
+    }
+
+    async function loadWeekReport(weekNum) {
+      const { data: weekData } = await client
+        .from('weeks')
+        .select('*, courses(name)')
+        .eq('week_number', parseInt(weekNum))
+        .limit(1);
+
+      const { data: pairData } = await client
+        .from('weekly_suggested_pairings')
+        .select('*, players(name)')
+        .eq('week_number', parseInt(weekNum))
+        .order('group_number');
+
+      const area = document.getElementById('email-report-area');
+
+      if (!weekData || weekData.length === 0 || !pairData || pairData.length === 0) {
+        area.value = `Week ${weekNum} has not been scheduled yet. Use the Season Engine above to establish it.`;
+        return;
+      }
+
+      const w = weekData[0];
+      const courseName = w.courses ? w.courses.name : 'League Venue';
+
+      let report = `🏌️‍♂️ DIMPLED BALLS GC — WEEK ${weekNum} PAIRINGS\n`;
+      report += `📅 Date: ${w.play_date}\n`;
+      report += `📍 Venue: ${courseName} (${w.side} 9 - Blue/White Combo)\n`;
+      report += `-------------------------------------------\n\n`;
+
+      const groups = {};
+      pairData.forEach(row => {
+        if (!groups[row.group_number]) {
+          groups[row.group_number] = { time: row.tee_time, names: [] };
+        }
+        groups[row.group_number].names.push(row.players ? row.players.name : 'Unknown');
+      });
+
+      Object.keys(groups).sort((a,b) => a-b).forEach(gNum => {
+        report += `GROUP ${gNum} • Tee Time: ${groups[gNum].time}\n`;
+        groups[gNum].names.forEach(name => {
+          report += `  - ${name}\n`;
+        });
+        report += `\n`;
+      });
+
+      report += `*Note: Pairings are suggested. Groups can adjust on the tee box before attestation.*`;
+      area.value = report;
+    }
+
+    async function reshuffleWeekFoursomes() {
+      const weekNum = parseInt(document.getElementById('admin-week-select').value);
+      const { data: seasonData } = await client.from('seasons').select('id').eq('is_active', true).limit(1);
+      const seasonId = seasonData[0].id;
+
+      await client.from('weekly_suggested_pairings').delete().eq('week_number', weekNum);
+
+      const weeklyGroups = generateFoursomesByPreference(allPlayers);
+      const rows = [];
+      weeklyGroups.forEach(g => {
+        g.players.forEach(p => {
+          rows.push({
+            season_id: seasonId,
+            week_number: weekNum,
+            group_number: g.groupNumber,
+            tee_time: g.teeTime,
+            player_id: p.id
+          });
+        });
+      });
+
+      await client.from('weekly_suggested_pairings').insert(rows);
+      await loadWeekReport(weekNum);
+      alert(`Re-shuffled pairings for Week ${weekNum}!`);
+    }
+
+    function copyEmailReport() {
+      const area = document.getElementById('email-report-area');
+      area.select();
+      navigator.clipboard.writeText(area.value);
+      alert("Weekly pairings report copied to clipboard!");
     }
 
     function renderAdminRoster() {
@@ -479,9 +800,14 @@
         item.innerHTML = `
           <div>
             <div class="text-xs font-bold text-white">${p.name}</div>
-            <div class="text-[10px] text-slate-400">HDCP: ${p.handicap_index} • ${p.phone || 'No phone'}</div>
+            <div class="text-[10px] text-slate-400">HDCP: ${p.handicap_index}</div>
           </div>
           <div class="flex items-center gap-1.5">
+            <select onchange="updatePlayerPreference('${p.id}', this.value)" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-emerald-400 font-semibold focus:outline-none">
+              <option value="no_preference" ${p.tee_time_preference === 'no_preference' ? 'selected' : ''}>No Pref</option>
+              <option value="early" ${p.tee_time_preference === 'early' ? 'selected' : ''}>🌅 Early</option>
+              <option value="late" ${p.tee_time_preference === 'late' ? 'selected' : ''}>🌇 Late</option>
+            </select>
             <button onclick="editPlayerHdcp('${p.id}', '${p.name}', ${p.handicap_index})" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-slate-300 rounded">Edit</button>
             <button onclick="deactivatePlayer('${p.id}', '${p.name}')" class="px-2 py-1 bg-rose-950 hover:bg-rose-900 text-rose-300 text-[10px] font-bold rounded">Remove</button>
           </div>
@@ -490,36 +816,16 @@
       });
     }
 
-    async function addNewPlayer() {
-      const name = document.getElementById('new-player-name').value.trim();
-      const hdcp = parseFloat(document.getElementById('new-player-hdcp').value);
-      const email = document.getElementById('new-player-email').value.trim();
-      const phone = document.getElementById('new-player-phone').value.trim();
-
-      if (!name || isNaN(hdcp)) {
-        alert("Please provide at least a Name and starting Handicap Index.");
-        return;
-      }
-
-      const { error } = await client.from('players').insert([{
-        name,
-        handicap_index: hdcp,
-        email: email || null,
-        phone: phone || null,
-        is_active: true
-      }]);
+    async function updatePlayerPreference(playerId, prefValue) {
+      const { error } = await client
+        .from('players')
+        .update({ tee_time_preference: prefValue })
+        .eq('id', playerId);
 
       if (error) {
-        alert("Error adding player: " + error.message);
+        alert("Error saving preference: " + error.message);
         return;
       }
-
-      document.getElementById('new-player-name').value = '';
-      document.getElementById('new-player-hdcp').value = '';
-      document.getElementById('new-player-email').value = '';
-      document.getElementById('new-player-phone').value = '';
-
-      alert(`Added ${name} to roster!`);
       await fetchPlayers();
     }
 
