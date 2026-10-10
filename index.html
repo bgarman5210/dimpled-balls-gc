@@ -35,14 +35,7 @@
         <div class="flex items-center gap-2">
           <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded text-[10px] font-black uppercase tracking-wider">Matchday</span>
           <select id="hub-week-select" onchange="switchHubWeek(this.value)" class="bg-emerald-950/80 border border-emerald-600/50 rounded-lg px-2 py-0.5 text-xs font-bold text-white focus:outline-none">
-            <option value="1">Week 1</option>
-            <option value="2">Week 2</option>
-            <option value="3">Week 3</option>
-            <option value="4">Week 4</option>
-            <option value="5">Week 5</option>
-            <option value="6">Week 6</option>
-            <option value="7">Week 7</option>
-            <option value="8">Week 8</option>
+            <!-- Dynamically populated -->
           </select>
         </div>
         <span id="hub-match-date" class="text-xs text-slate-300 font-medium">--</span>
@@ -78,7 +71,6 @@
         <button onclick="fetchTrashTalk()" class="text-[10px] text-slate-400 hover:text-white">🔄 Refresh</button>
       </div>
 
-      <!-- Post message box -->
       <div class="space-y-2">
         <div class="grid grid-cols-2 gap-1.5">
           <select id="trash-from-player" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white">
@@ -94,7 +86,6 @@
         </div>
       </div>
 
-      <!-- Feed list -->
       <div id="trash-feed" class="space-y-2 max-h-48 overflow-y-auto pr-1 pt-1 divide-y divide-slate-800">
         <div class="text-[11px] text-slate-500 text-center py-2">No chatter or milestones yet today.</div>
       </div>
@@ -217,80 +208,73 @@
     </div>
 
     <div id="admin-content" class="space-y-4 hidden">
-      <!-- SCORE AUDITING -->
-      <div class="bg-slate-800 rounded-xl p-4 border border-amber-500/40 shadow space-y-3">
-        <h3 class="text-sm font-bold text-amber-400 flex items-center justify-between">
-          <span>✏️ Scorecard Audit & Corrections</span>
-        </h3>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-[10px] text-slate-400 mb-1">Week</label>
-            <select id="audit-week-select" onchange="loadAuditPlayers(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
-              <option value="1">Week 1</option>
-              <option value="2">Week 2</option>
-              <option value="3">Week 3</option>
-              <option value="4">Week 4</option>
-              <option value="5">Week 5</option>
-              <option value="6">Week 6</option>
-              <option value="7">Week 7</option>
-              <option value="8">Week 8</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-[10px] text-slate-400 mb-1">Player</label>
-            <select id="audit-player-select" onchange="loadPlayerRoundScores(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
-              <option value="">Select Player...</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="audit-grid" class="hidden space-y-2 pt-2 border-t border-slate-700">
-          <div class="grid grid-cols-9 gap-1 text-center" id="audit-holes-header"></div>
-          <div class="grid grid-cols-9 gap-1" id="audit-holes-inputs"></div>
-          <button onclick="saveAuditScoreCorrections()" class="w-full mt-2 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg text-xs font-bold text-white shadow">Save Hole Corrections</button>
-        </div>
-      </div>
-
-      <!-- SEASON SETUP & GENERATOR -->
+      <!-- 1. TOP: SEASON & SCHEDULE ENGINE -->
       <div class="bg-slate-800 rounded-xl p-4 border border-emerald-500/40 shadow space-y-3">
-        <h3 class="text-sm font-bold text-emerald-400 flex items-center justify-between">
-          <span>⚡ Season & Schedule Engine</span>
-        </h3>
-        <div class="space-y-2 pt-1 border-t border-slate-700">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-bold text-emerald-400 flex items-center gap-1.5">⚡ Season & Schedule Engine</h3>
+          <span id="admin-active-week-badge" class="text-xs text-slate-300 font-normal">Active Week: 1</span>
+        </div>
+
+        <div class="space-y-2.5 pt-1 border-t border-slate-700">
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-[10px] text-slate-400 mb-1">League Start Date</label>
               <input type="date" id="season-start-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white" />
             </div>
             <div>
-              <label class="block text-[10px] text-slate-400 mb-1">Season Course</label>
-              <select id="season-course-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
-                <option value="c0000001-0000-0000-0000-000000000001">Morgan Creek (Blue/White)</option>
-                <option value="c0000005-0000-0000-0000-000000000005">Lincoln Hills Orchard (Gold)</option>
-                <option value="c0000006-0000-0000-0000-000000000006">Lincoln Hills Hills (Gold)</option>
+              <label class="block text-[10px] text-slate-400 mb-1">Total Weeks in Season</label>
+              <input type="number" id="season-total-weeks" value="8" min="1" max="24" onchange="syncWeekSelects()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Setup Scope</label>
+              <select id="season-scope-select" onchange="toggleSingleWeekSelect()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-emerald-400 font-bold focus:outline-none">
+                <option value="all">Establish All Weeks</option>
+                <option value="single">Establish One Week at a Time</option>
+              </select>
+            </div>
+            <div id="single-week-picker-container" class="hidden">
+              <label class="block text-[10px] text-slate-400 mb-1">Target Week</label>
+              <select id="season-single-target-week" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-bold"></select>
+            </div>
+            <div id="side-select-container">
+              <label class="block text-[10px] text-slate-400 mb-1">Side Played</label>
+              <select id="season-side-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                <option value="Front">Front 9</option>
+                <option value="Back">Back 9</option>
               </select>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 pt-1">
+          <div>
+            <label class="block text-[10px] text-slate-400 mb-1">Default Course</label>
+            <select id="season-course-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              <option value="c0000001-0000-0000-0000-000000000001">Morgan Creek (Blue/White)</option>
+              <option value="c0000005-0000-0000-0000-000000000005">Lincoln Hills Orchard (Gold)</option>
+              <option value="c0000006-0000-0000-0000-000000000006">Lincoln Hills Hills (Gold)</option>
+            </select>
+          </div>
+
+          <div id="all-weeks-checkboxes" class="grid grid-cols-2 gap-2 pt-0.5">
             <label class="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
               <input type="checkbox" id="season-same-course" checked class="w-3.5 h-3.5 rounded text-emerald-600 bg-slate-900 border-slate-700" />
-              <span>Same Course all 8 Weeks</span>
+              <span>Same Course Across Season</span>
             </label>
             <label class="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
               <input type="checkbox" id="season-alternate-sides" checked class="w-3.5 h-3.5 rounded text-emerald-600 bg-slate-900 border-slate-700" />
-              <span>Alternate Front/Back 9</span>
+              <span>Alternate Front / Back 9</span>
             </label>
           </div>
 
-          <div class="pt-2 flex gap-2">
-            <button onclick="generateFullSeason(8)" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow">Establish 8-Week Season</button>
-            <button onclick="generateFullSeason(1)" class="py-2 px-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold text-slate-200">Week 1 Only</button>
-          </div>
+          <button onclick="executeScheduleSetup()" class="w-full mt-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow transition">
+            Save & Establish Schedule
+          </button>
         </div>
       </div>
 
-      <!-- ADD LEAGUE MEMBER -->
+      <!-- 2. ADD LEAGUE MEMBER -->
       <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
         <h3 class="text-sm font-bold text-emerald-400 flex items-center gap-1.5">➕ Add League Member</h3>
         <div class="grid grid-cols-2 gap-2">
@@ -312,10 +296,36 @@
         <button onclick="addNewPlayer()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow">Save to Roster</button>
       </div>
 
-      <!-- ROSTER & PREFERENCES -->
+      <!-- 3. ROSTER & TIME PREFERENCES -->
       <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
         <h3 class="text-sm font-bold text-white">👥 Member Time Preferences (<span id="admin-roster-count">0</span>)</h3>
         <div id="admin-roster-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
+      </div>
+
+      <!-- 4. BOTTOM: SCORECARD AUDIT & CORRECTIONS -->
+      <div class="bg-slate-800 rounded-xl p-4 border border-amber-500/40 shadow space-y-3">
+        <h3 class="text-sm font-bold text-amber-400 flex items-center justify-between">
+          <span>✏️ Scorecard Audit & Corrections</span>
+        </h3>
+        <p class="text-[11px] text-slate-400">Review or correct any individual hole score on an attested round.</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-slate-400 mb-1">Week</label>
+            <select id="audit-week-select" onchange="loadAuditPlayers(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"></select>
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-400 mb-1">Player</label>
+            <select id="audit-player-select" onchange="loadPlayerRoundScores(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+              <option value="">Select Player...</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="audit-grid" class="hidden space-y-2 pt-2 border-t border-slate-700">
+          <div class="grid grid-cols-9 gap-1 text-center" id="audit-holes-header"></div>
+          <div class="grid grid-cols-9 gap-1" id="audit-holes-inputs"></div>
+          <button onclick="saveAuditScoreCorrections()" class="w-full mt-2 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg text-xs font-bold text-white shadow">Save Hole Corrections</button>
+        </div>
       </div>
     </div>
   </main>
@@ -327,6 +337,7 @@
 
     let activeWeek = null;
     let viewingWeekNum = 1;
+    let totalSeasonWeeks = 8;
     let activeTeeSet = null;
     let holes = [];
     let currentHoleIndex = 0;
@@ -343,12 +354,64 @@
 
     async function init() {
       document.getElementById('season-start-date').value = new Date().toISOString().split('T')[0];
+      syncWeekSelects();
       await fetchPlayers();
       await loadActiveSchedule();
       renderHoleNav();
       fetchLeaderboard();
       fetchClubhouseStats();
       fetchTrashTalk();
+    }
+
+    function syncWeekSelects() {
+      totalSeasonWeeks = parseInt(document.getElementById('season-total-weeks').value) || 8;
+      const hubSelect = document.getElementById('hub-week-select');
+      const targetSelect = document.getElementById('season-single-target-week');
+      const auditSelect = document.getElementById('audit-week-select');
+
+      const prevHubVal = hubSelect.value || "1";
+      const prevAuditVal = auditSelect.value || "1";
+
+      hubSelect.innerHTML = '';
+      targetSelect.innerHTML = '';
+      auditSelect.innerHTML = '';
+
+      for (let w = 1; w <= totalSeasonWeeks; w++) {
+        const o1 = document.createElement('option');
+        o1.value = w;
+        o1.textContent = `Week ${w}`;
+        hubSelect.appendChild(o1);
+
+        const o2 = document.createElement('option');
+        o2.value = w;
+        o2.textContent = `Week ${w}`;
+        targetSelect.appendChild(o2);
+
+        const o3 = document.createElement('option');
+        o3.value = w;
+        o3.textContent = `Week ${w}`;
+        auditSelect.appendChild(o3);
+      }
+
+      hubSelect.value = prevHubVal <= totalSeasonWeeks ? prevHubVal : "1";
+      auditSelect.value = prevAuditVal <= totalSeasonWeeks ? prevAuditVal : "1";
+    }
+
+    function toggleSingleWeekSelect() {
+      const scope = document.getElementById('season-scope-select').value;
+      const targetContainer = document.getElementById('single-week-picker-container');
+      const sideContainer = document.getElementById('side-select-container');
+      const allCheckboxes = document.getElementById('all-weeks-checkboxes');
+
+      if (scope === 'single') {
+        targetContainer.classList.remove('hidden');
+        sideContainer.classList.remove('hidden');
+        allCheckboxes.classList.add('hidden');
+      } else {
+        targetContainer.classList.add('hidden');
+        sideContainer.classList.add('hidden');
+        allCheckboxes.classList.remove('hidden');
+      }
     }
 
     async function loadActiveSchedule() {
@@ -362,6 +425,7 @@
       activeWeek = weekData[0];
       viewingWeekNum = activeWeek.week_number;
       document.getElementById('hub-week-select').value = viewingWeekNum;
+      document.getElementById('admin-active-week-badge').textContent = `Active Week: ${activeWeek.week_number}`;
 
       await renderHubWeekData(viewingWeekNum);
     }
@@ -378,9 +442,19 @@
         .eq('week_number', weekNum)
         .limit(1);
 
-      if (!wData || wData.length === 0) return;
-      const targetWeek = wData[0];
+      if (!wData || wData.length === 0) {
+        document.getElementById('hub-match-date').textContent = 'Not Scheduled';
+        document.getElementById('hub-course-title').textContent = `Week ${weekNum} Not Set`;
+        document.getElementById('hub-tee-subtitle').textContent = 'Admin can set schedule in Admin tab';
+        document.getElementById('hub-groups-container').innerHTML = `
+          <div class="bg-slate-800/80 p-4 rounded-xl text-center border border-slate-700/60">
+            <p class="text-xs text-slate-400">Week ${weekNum} has not been scheduled yet.</p>
+          </div>
+        `;
+        return;
+      }
 
+      const targetWeek = wData[0];
       const { data: tData } = await client
         .from('tee_sets')
         .select('*')
@@ -431,10 +505,7 @@
       weekSuggestedGroups = {};
       pairRows.forEach(r => {
         if (!weekSuggestedGroups[r.group_number]) {
-          weekSuggestedGroups[r.group_number] = {
-            teeTime: r.tee_time,
-            players: []
-          };
+          weekSuggestedGroups[r.group_number] = { teeTime: r.tee_time, players: [] };
         }
         if (r.players) weekSuggestedGroups[r.group_number].players.push(r.players);
       });
@@ -462,9 +533,7 @@
               Score Group 🏌️‍♂️
             </button>
           </div>
-          <div class="bg-slate-900/60 rounded-lg p-2 space-y-0.5">
-            ${playerListHtml}
-          </div>
+          <div class="bg-slate-900/60 rounded-lg p-2 space-y-0.5">${playerListHtml}</div>
         `;
         container.appendChild(card);
       });
@@ -790,7 +859,6 @@
 
       await client.from('scores').insert(scoreRows);
 
-      // Auto-broadcast any round milestones (birdies, eagles, aces)
       for (const p of selectedGroupPlayers) {
         for (const h of holes) {
           const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
@@ -903,96 +971,143 @@
       });
     }
 
-    // --- ADMIN ENGINE ---
+    // --- ADMIN CONTROLS ---
     function unlockAdmin() {
       const pin = document.getElementById('admin-pin').value;
       if (pin === '2204') {
         isAdminUnlocked = true;
         document.getElementById('admin-gate').classList.add('hidden');
         document.getElementById('admin-content').classList.remove('hidden');
-        loadAuditPlayers(1);
+        loadAuditPlayers(document.getElementById('audit-week-select').value || 1);
       } else {
         alert("Incorrect PIN.");
       }
     }
 
-    async function loadAuditPlayers(weekNum) {
-      const { data: weekData } = await client.from('weeks').select('id').eq('week_number', parseInt(weekNum)).limit(1);
-      const playerSelect = document.getElementById('audit-player-select');
-      playerSelect.innerHTML = '<option value="">Select Player...</option>';
-      document.getElementById('audit-grid').classList.add('hidden');
+    function generateFoursomesByPreference(playersList) {
+      let early = playersList.filter(p => p.tee_time_preference === 'early').sort(() => 0.5 - Math.random());
+      let late = playersList.filter(p => p.tee_time_preference === 'late').sort(() => 0.5 - Math.random());
+      let flex = playersList.filter(p => p.tee_time_preference === 'no_preference' || !p.tee_time_preference).sort(() => 0.5 - Math.random());
+      const orderedQueue = [...early, ...flex, ...late];
 
-      if (!weekData || weekData.length === 0) return;
-      const { data: pairings } = await client.from('pairings').select('id').eq('week_id', weekData[0].id);
-      if (!pairings || pairings.length === 0) return;
-
-      const { data: scores } = await client
-        .from('scores')
-        .select('player_id, players(name)')
-        .in('pairing_id', pairings.map(p => p.id));
-
-      const seen = new Set();
-      scores?.forEach(s => {
-        if (!seen.has(s.player_id)) {
-          seen.add(s.player_id);
-          const opt = document.createElement('option');
-          opt.value = s.player_id;
-          opt.textContent = s.players?.name || 'Unknown';
-          playerSelect.appendChild(opt);
+      const groups = [];
+      const times = ["4:00 PM", "4:10 PM", "4:20 PM", "4:30 PM", "4:40 PM"];
+      for (let g = 0; g < 5; g++) {
+        const groupMembers = orderedQueue.slice(g * 4, (g * 4) + 4);
+        if (groupMembers.length > 0) {
+          groups.push({ groupNumber: g + 1, teeTime: times[g], players: groupMembers });
         }
-      });
+      }
+      return groups;
     }
 
-    async function loadPlayerRoundScores(playerId) {
-      if (!playerId) {
-        document.getElementById('audit-grid').classList.add('hidden');
+    async function executeScheduleSetup() {
+      const scope = document.getElementById('season-scope-select').value;
+      const startDateStr = document.getElementById('season-start-date').value;
+      const courseId = document.getElementById('season-course-select').value;
+      const totalWeeks = parseInt(document.getElementById('season-total-weeks').value) || 8;
+
+      if (!startDateStr) {
+        alert("Please select a League Start Date.");
         return;
       }
-      const weekNum = parseInt(document.getElementById('audit-week-select').value);
-      const { data: weekData } = await client.from('weeks').select('id').eq('week_number', weekNum).limit(1);
-      const { data: pairings } = await client.from('pairings').select('id').eq('week_id', weekData[0].id);
 
-      const { data: scores } = await client
-        .from('scores')
-        .select('*')
-        .eq('player_id', playerId)
-        .in('pairing_id', pairings.map(p => p.id))
-        .order('hole_number');
+      const { data: seasonData } = await client.from('seasons').select('id').eq('is_active', true).limit(1);
+      const seasonId = seasonData[0].id;
+      const startDate = new Date(startDateStr + 'T12:00:00');
+      const sides = ['Front', 'Back'];
 
-      auditScoreRecords = scores || [];
-      const header = document.getElementById('audit-holes-header');
-      const inputs = document.getElementById('audit-holes-inputs');
-      header.innerHTML = '';
-      inputs.innerHTML = '';
+      if (scope === 'all') {
+        const altSides = document.getElementById('season-alternate-sides').checked;
+        await client.from('weekly_suggested_pairings').delete().eq('season_id', seasonId);
 
-      auditScoreRecords.forEach(s => {
-        const th = document.createElement('div');
-        th.className = "text-[10px] font-bold text-slate-400";
-        th.textContent = `H${s.hole_number}`;
-        header.appendChild(th);
+        for (let w = 1; w <= totalWeeks; w++) {
+          const playDate = new Date(startDate);
+          playDate.setDate(playDate.getDate() + ((w - 1) * 7));
+          const playDateStr = playDate.toISOString().split('T')[0];
+          const side = altSides ? sides[(w - 1) % 2] : 'Front';
 
-        const inp = document.createElement('input');
-        inp.type = "number";
-        inp.value = s.gross_score;
-        inp.id = `audit-score-${s.id}`;
-        inp.className = "w-full bg-slate-900 border border-slate-700 rounded py-1 text-center text-xs text-white font-bold";
-        inputs.appendChild(inp);
-      });
+          const { data: teeData } = await client
+            .from('tee_sets')
+            .select('id')
+            .eq('course_id', courseId)
+            .eq('side', side)
+            .limit(1);
 
-      document.getElementById('audit-grid').classList.remove('hidden');
-    }
+          const teeSetId = teeData && teeData.length > 0 ? teeData[0].id : null;
 
-    async function saveAuditScoreCorrections() {
-      for (const s of auditScoreRecords) {
-        const inputVal = parseInt(document.getElementById(`audit-score-${s.id}`).value);
-        if (!isNaN(inputVal) && inputVal !== s.gross_score) {
-          const newNet = inputVal - s.strokes_received;
-          await client.from('scores').update({ gross_score: inputVal, net_score: newNet }).eq('id', s.id);
+          await client.from('weeks').upsert({
+            season_id: seasonId,
+            week_number: w,
+            play_date: playDateStr,
+            course_id: courseId,
+            tee_set_id: teeSetId,
+            side: side
+          });
+
+          const weeklyGroups = generateFoursomesByPreference(allPlayers);
+          const rows = [];
+          weeklyGroups.forEach(g => {
+            g.players.forEach(p => {
+              rows.push({
+                season_id: seasonId,
+                week_number: w,
+                group_number: g.groupNumber,
+                tee_time: g.teeTime,
+                player_id: p.id
+              });
+            });
+          });
+          await client.from('weekly_suggested_pairings').insert(rows);
         }
+        alert(`Successfully established complete ${totalWeeks}-week season!`);
+      } else {
+        // Scope = Single Week Only
+        const targetWeek = parseInt(document.getElementById('season-single-target-week').value) || 1;
+        const side = document.getElementById('season-side-select').value;
+
+        const playDate = new Date(startDate);
+        playDate.setDate(playDate.getDate() + ((targetWeek - 1) * 7));
+        const playDateStr = playDate.toISOString().split('T')[0];
+
+        const { data: teeData } = await client
+          .from('tee_sets')
+          .select('id')
+          .eq('course_id', courseId)
+          .eq('side', side)
+          .limit(1);
+
+        const teeSetId = teeData && teeData.length > 0 ? teeData[0].id : null;
+
+        await client.from('weeks').upsert({
+          season_id: seasonId,
+          week_number: targetWeek,
+          play_date: playDateStr,
+          course_id: courseId,
+          tee_set_id: teeSetId,
+          side: side
+        });
+
+        await client.from('weekly_suggested_pairings').delete().eq('season_id', seasonId).eq('week_number', targetWeek);
+
+        const weeklyGroups = generateFoursomesByPreference(allPlayers);
+        const rows = [];
+        weeklyGroups.forEach(g => {
+          g.players.forEach(p => {
+            rows.push({
+              season_id: seasonId,
+              week_number: targetWeek,
+              group_number: g.groupNumber,
+              tee_time: g.teeTime,
+              player_id: p.id
+            });
+          });
+        });
+        await client.from('weekly_suggested_pairings').insert(rows);
+        alert(`Successfully established Week ${targetWeek}!`);
       }
-      alert("Hole corrections saved!");
-      fetchLeaderboard();
-      fetchClubhouseStats();
+
+      location.reload();
     }
 
     async function addNewPlayer() {
@@ -1070,81 +1185,84 @@
       await fetchPlayers();
     }
 
-    function generateFoursomesByPreference(playersList) {
-      let early = playersList.filter(p => p.tee_time_preference === 'early').sort(() => 0.5 - Math.random());
-      let late = playersList.filter(p => p.tee_time_preference === 'late').sort(() => 0.5 - Math.random());
-      let flex = playersList.filter(p => p.tee_time_preference === 'no_preference' || !p.tee_time_preference).sort(() => 0.5 - Math.random());
-      const orderedQueue = [...early, ...flex, ...late];
+    // --- AUDIT CONTROLS ---
+    async function loadAuditPlayers(weekNum) {
+      const { data: weekData } = await client.from('weeks').select('id').eq('week_number', parseInt(weekNum)).limit(1);
+      const playerSelect = document.getElementById('audit-player-select');
+      playerSelect.innerHTML = '<option value="">Select Player...</option>';
+      document.getElementById('audit-grid').classList.add('hidden');
 
-      const groups = [];
-      const times = ["4:00 PM", "4:10 PM", "4:20 PM", "4:30 PM", "4:40 PM"];
-      for (let g = 0; g < 5; g++) {
-        const groupMembers = orderedQueue.slice(g * 4, (g * 4) + 4);
-        if (groupMembers.length > 0) {
-          groups.push({ groupNumber: g + 1, teeTime: times[g], players: groupMembers });
+      if (!weekData || weekData.length === 0) return;
+      const { data: pairings } = await client.from('pairings').select('id').eq('week_id', weekData[0].id);
+      if (!pairings || pairings.length === 0) return;
+
+      const { data: scores } = await client
+        .from('scores')
+        .select('player_id, players(name)')
+        .in('pairing_id', pairings.map(p => p.id));
+
+      const seen = new Set();
+      scores?.forEach(s => {
+        if (!seen.has(s.player_id)) {
+          seen.add(s.player_id);
+          const opt = document.createElement('option');
+          opt.value = s.player_id;
+          opt.textContent = s.players?.name || 'Unknown';
+          playerSelect.appendChild(opt);
         }
-      }
-      return groups;
+      });
     }
 
-    async function generateFullSeason(totalWeeks) {
-      const startDateStr = document.getElementById('season-start-date').value;
-      if (!startDateStr) {
-        alert("Please select a League Start Date.");
+    async function loadPlayerRoundScores(playerId) {
+      if (!playerId) {
+        document.getElementById('audit-grid').classList.add('hidden');
         return;
       }
-      const courseId = document.getElementById('season-course-select').value;
-      const altSides = document.getElementById('season-alternate-sides').checked;
+      const weekNum = parseInt(document.getElementById('audit-week-select').value);
+      const { data: weekData } = await client.from('weeks').select('id').eq('week_number', weekNum).limit(1);
+      const { data: pairings } = await client.from('pairings').select('id').eq('week_id', weekData[0].id);
 
-      const { data: seasonData } = await client.from('seasons').select('id').eq('is_active', true).limit(1);
-      const seasonId = seasonData[0].id;
-      const startDate = new Date(startDateStr + 'T12:00:00');
-      const sides = ['Front', 'Back'];
+      const { data: scores } = await client
+        .from('scores')
+        .select('*')
+        .eq('player_id', playerId)
+        .in('pairing_id', pairings.map(p => p.id))
+        .order('hole_number');
 
-      await client.from('weekly_suggested_pairings').delete().eq('season_id', seasonId);
+      auditScoreRecords = scores || [];
+      const header = document.getElementById('audit-holes-header');
+      const inputs = document.getElementById('audit-holes-inputs');
+      header.innerHTML = '';
+      inputs.innerHTML = '';
 
-      for (let w = 1; w <= totalWeeks; w++) {
-        const playDate = new Date(startDate);
-        playDate.setDate(playDate.getDate() + ((w - 1) * 7));
-        const playDateStr = playDate.toISOString().split('T')[0];
-        const side = altSides ? sides[(w - 1) % 2] : 'Front';
+      auditScoreRecords.forEach(s => {
+        const th = document.createElement('div');
+        th.className = "text-[10px] font-bold text-slate-400";
+        th.textContent = `H${s.hole_number}`;
+        header.appendChild(th);
 
-        const { data: teeData } = await client
-          .from('tee_sets')
-          .select('id')
-          .eq('course_id', courseId)
-          .eq('side', side)
-          .limit(1);
+        const inp = document.createElement('input');
+        inp.type = "number";
+        inp.value = s.gross_score;
+        inp.id = `audit-score-${s.id}`;
+        inp.className = "w-full bg-slate-900 border border-slate-700 rounded py-1 text-center text-xs text-white font-bold";
+        inputs.appendChild(inp);
+      });
 
-        const teeSetId = teeData && teeData.length > 0 ? teeData[0].id : null;
+      document.getElementById('audit-grid').classList.remove('hidden');
+    }
 
-        await client.from('weeks').upsert({
-          season_id: seasonId,
-          week_number: w,
-          play_date: playDateStr,
-          course_id: courseId,
-          tee_set_id: teeSetId,
-          side: side
-        });
-
-        const weeklyGroups = generateFoursomesByPreference(allPlayers);
-        const rows = [];
-        weeklyGroups.forEach(g => {
-          g.players.forEach(p => {
-            rows.push({
-              season_id: seasonId,
-              week_number: w,
-              group_number: g.groupNumber,
-              tee_time: g.teeTime,
-              player_id: p.id
-            });
-          });
-        });
-        await client.from('weekly_suggested_pairings').insert(rows);
+    async function saveAuditScoreCorrections() {
+      for (const s of auditScoreRecords) {
+        const inputVal = parseInt(document.getElementById(`audit-score-${s.id}`).value);
+        if (!isNaN(inputVal) && inputVal !== s.gross_score) {
+          const newNet = inputVal - s.strokes_received;
+          await client.from('scores').update({ gross_score: inputVal, net_score: newNet }).eq('id', s.id);
+        }
       }
-
-      alert(`Successfully established ${totalWeeks} week schedule!`);
-      location.reload();
+      alert("Hole corrections saved!");
+      fetchLeaderboard();
+      fetchClubhouseStats();
     }
 
     function switchTab(tab) {
