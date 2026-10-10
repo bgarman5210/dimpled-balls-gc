@@ -293,7 +293,7 @@
             <option value="late">🌇 Late (4:30 - 4:40 PM)</option>
           </select>
         </div>
-        <button onclick="addNewPlayer()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow">Save to Roster</button>
+        <button onclick="()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow">Save to Roster</button>
       </div>
 
       <!-- 3. ROSTER & TIME PREFERENCES -->
@@ -1110,7 +1110,7 @@
       location.reload();
     }
 
-    async function addNewPlayer() {
+async function addNewPlayer() {
       const name = document.getElementById('new-player-name').value.trim();
       const hdcp = parseFloat(document.getElementById('new-player-hdcp').value);
       const email = document.getElementById('new-player-email').value.trim();
@@ -1122,6 +1122,36 @@
         return;
       }
 
+      // 1. Check if this player already exists (including inactive/alumni)
+      const { data: existing } = await client
+        .from('players')
+        .select('*')
+        .ilike('name', name)
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        const found = existing[0];
+        if (confirm(`${found.name} already exists in the database (${found.is_active ? 'Active' : 'Inactive'}). Would you like to reactivate them with this updated Handicap Index (${hdcp})?`)) {
+          await client
+            .from('players')
+            .update({
+              handicap_index: hdcp,
+              email: email || found.email,
+              phone: phone || found.phone,
+              tee_time_preference: pref,
+              is_active: true
+            })
+            .eq('id', found.id);
+
+          alert(`${found.name} has been reactivated!`);
+          await fetchPlayers();
+          return;
+        } else {
+          return;
+        }
+      }
+
+      // 2. Insert new player if no match found
       await client.from('players').insert([{
         name,
         handicap_index: hdcp,
@@ -1140,7 +1170,6 @@
       alert(`Added ${name} to roster!`);
       await fetchPlayers();
     }
-
     function renderAdminRoster() {
       document.getElementById('admin-roster-count').textContent = allPlayers.length;
       const list = document.getElementById('admin-roster-list');
