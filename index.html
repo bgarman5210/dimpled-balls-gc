@@ -60,23 +60,20 @@
       </div>
     </div>
 
-    <!-- Grouped Foursomes (Ordered by Schedule) -->
+    <!-- Scheduled Foursomes -->
     <div class="space-y-3">
       <div class="flex justify-between items-center px-1">
         <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Scheduled Foursomes</h3>
         <span class="text-[10px] text-slate-500">Tap card to score group</span>
       </div>
-
-      <div id="hub-groups-container" class="space-y-2.5">
-        <!-- Rendered dynamically -->
-      </div>
+      <div id="hub-groups-container" class="space-y-2.5"></div>
     </div>
 
-    <!-- 19th Hole Trash Talk Board -->
+    <!-- 19th Hole Trash Talk & Activity Board -->
     <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
       <div class="flex justify-between items-center">
         <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-          🗣️ 19th Hole Trash Talk
+          🗣️ 19th Hole Chatter & Alerts
         </h3>
         <button onclick="fetchTrashTalk()" class="text-[10px] text-slate-400 hover:text-white">🔄 Refresh</button>
       </div>
@@ -99,7 +96,7 @@
 
       <!-- Feed list -->
       <div id="trash-feed" class="space-y-2 max-h-48 overflow-y-auto pr-1 pt-1 divide-y divide-slate-800">
-        <div class="text-[11px] text-slate-500 text-center py-2">No chatter yet. Fire the first shot!</div>
+        <div class="text-[11px] text-slate-500 text-center py-2">No chatter or milestones yet today.</div>
       </div>
     </div>
   </main>
@@ -267,7 +264,7 @@
             </div>
             <div>
               <label class="block text-[10px] text-slate-400 mb-1">Season Course</label>
-              <select id="season-course-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+              <select id="season-course-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
                 <option value="c0000001-0000-0000-0000-000000000001">Morgan Creek (Blue/White)</option>
                 <option value="c0000005-0000-0000-0000-000000000005">Lincoln Hills Orchard (Gold)</option>
                 <option value="c0000006-0000-0000-0000-000000000006">Lincoln Hills Hills (Gold)</option>
@@ -355,7 +352,6 @@
     }
 
     async function loadActiveSchedule() {
-      // 1. Fetch current scheduled week
       const { data: weekData } = await client
         .from('weeks')
         .select('*, courses(name)')
@@ -394,7 +390,6 @@
 
       if (tData && tData.length > 0) activeTeeSet = tData[0];
 
-      // Update Hub Hero Banner
       const cName = targetWeek.courses ? targetWeek.courses.name.replace('Golf Club', '').replace('Course', '').trim() : 'Course';
       const tName = activeTeeSet ? activeTeeSet.tee_name : 'Combo';
       document.getElementById('hub-match-date').textContent = targetWeek.play_date || 'Date TBD';
@@ -402,7 +397,6 @@
       document.getElementById('hub-tee-subtitle').textContent = `${tName} • Par ${activeTeeSet ? activeTeeSet.par : 36}`;
       document.getElementById('course-header').textContent = `${cName} • ${targetWeek.side} 9`;
 
-      // Fetch Holes
       const { data: holeData } = await client
         .from('course_holes')
         .select('*')
@@ -411,8 +405,6 @@
         .order('hole_number', { ascending: true });
 
       holes = holeData || [];
-
-      // Render Suggested Foursomes in Scheduled Order
       await renderHubFoursomes(weekNum);
     }
 
@@ -531,32 +523,93 @@
       });
     }
 
-    // --- TRASH TALK FEED ---
+    // --- MILESTONES & TRASH TALK ---
+    async function checkAndBroadcastMilestone(player, hole, grossScore, pairingId = null) {
+      const diff = grossScore - hole.par;
+      let postType = null;
+      let alertMsg = "";
+
+      if (grossScore === 1) {
+        postType = 'ace';
+        alertMsg = `🎯 HOLE-IN-ONE! Sunk it on Hole ${hole.hole_number} (${hole.yardage} yds, Par ${hole.par})! Drinks on ${player.name.split(' ')[0]}! 🍻`;
+      } else if (diff === -2) {
+        postType = 'eagle';
+        alertMsg = `🦅 EAGLE on Hole ${hole.hole_number}! Dropped a 2-under par ${grossScore} on Par ${hole.par}!`;
+      } else if (diff === -1) {
+        postType = 'birdie';
+        alertMsg = `🐦 Birdie on Hole ${hole.hole_number}! Carded a ${grossScore} on Par ${hole.par}! Putting circle pressure!`;
+      }
+
+      if (!postType) return;
+
+      await client.from('trash_talk').insert([{
+        player_id: player.id,
+        target_name: 'The Field',
+        message: alertMsg,
+        post_type: postType,
+        hole_number: hole.hole_number,
+        pairing_id: pairingId
+      }]);
+
+      await fetchTrashTalk();
+    }
+
     async function fetchTrashTalk() {
       const { data, error } = await client
         .from('trash_talk')
         .select('*, players(name)')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(25);
 
       const feed = document.getElementById('trash-feed');
       if (error || !data || data.length === 0) {
-        feed.innerHTML = '<div class="text-[11px] text-slate-500 text-center py-2">No chatter yet. Fire the first shot!</div>';
+        feed.innerHTML = '<div class="text-[11px] text-slate-500 text-center py-2">No chatter or milestones yet today.</div>';
         return;
       }
 
       feed.innerHTML = '';
       data.forEach(t => {
         const item = document.createElement('div');
-        item.className = "py-2";
         const sender = t.players ? t.players.name : 'Golfer';
-        item.innerHTML = `
-          <div class="flex justify-between items-baseline text-[10px]">
-            <span class="font-bold text-amber-400">${sender} <span class="text-slate-400 font-normal">→ ${t.target_name}</span></span>
-            <span class="text-slate-500">${new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-          </div>
-          <p class="text-xs text-slate-200 mt-0.5">${t.message}</p>
-        `;
+        const timeStr = new Date(t.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        if (t.post_type === 'ace') {
+          item.className = "p-2 rounded-lg bg-gradient-to-r from-amber-600/30 to-amber-900/30 border border-amber-500/50 my-1";
+          item.innerHTML = `
+            <div class="flex justify-between items-baseline text-[10px]">
+              <span class="font-black text-amber-300 uppercase tracking-wider">🚨 HOLE-IN-ONE ALERT</span>
+              <span class="text-amber-300/70 font-mono">${timeStr}</span>
+            </div>
+            <p class="text-xs font-bold text-white mt-0.5">${t.message}</p>
+          `;
+        } else if (t.post_type === 'eagle') {
+          item.className = "p-2 rounded-lg bg-purple-900/30 border border-purple-500/40 my-1";
+          item.innerHTML = `
+            <div class="flex justify-between items-baseline text-[10px]">
+              <span class="font-bold text-purple-300 uppercase tracking-wider">🦅 EAGLE ALERT</span>
+              <span class="text-purple-300/70 font-mono">${timeStr}</span>
+            </div>
+            <p class="text-xs font-semibold text-white mt-0.5">${t.message}</p>
+          `;
+        } else if (t.post_type === 'birdie') {
+          item.className = "p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 my-1";
+          item.innerHTML = `
+            <div class="flex justify-between items-baseline text-[10px]">
+              <span class="font-bold text-emerald-400 uppercase tracking-wider">🐦 BIRDIE ALERT</span>
+              <span class="text-emerald-400/70 font-mono">${timeStr}</span>
+            </div>
+            <p class="text-xs text-emerald-100 mt-0.5">${t.message}</p>
+          `;
+        } else {
+          item.className = "py-2 border-b border-slate-800 last:border-0";
+          item.innerHTML = `
+            <div class="flex justify-between items-baseline text-[10px]">
+              <span class="font-bold text-amber-400">${sender} <span class="text-slate-400 font-normal">→ ${t.target_name}</span></span>
+              <span class="text-slate-500 font-mono">${timeStr}</span>
+            </div>
+            <p class="text-xs text-slate-200 mt-0.5">${t.message}</p>
+          `;
+        }
         feed.appendChild(item);
       });
     }
@@ -575,11 +628,12 @@
       const { error } = await client.from('trash_talk').insert([{
         player_id: fromId,
         target_name: targetName,
-        message: msg
+        message: msg,
+        post_type: 'banter'
       }]);
 
       if (error) {
-        alert("Error posting trash talk: " + error.message);
+        alert("Error posting message: " + error.message);
         return;
       }
 
@@ -735,6 +789,17 @@
       });
 
       await client.from('scores').insert(scoreRows);
+
+      // Auto-broadcast any round milestones (birdies, eagles, aces)
+      for (const p of selectedGroupPlayers) {
+        for (const h of holes) {
+          const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
+          if (gross < h.par || gross === 1) {
+            await checkAndBroadcastMilestone(p, h, gross, pairingId);
+          }
+        }
+      }
+
       alert("Group round attested & scores saved to cloud!");
       submitBtn.disabled = false;
       submitBtn.textContent = "Finalize Group & Attest";
