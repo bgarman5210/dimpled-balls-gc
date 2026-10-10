@@ -270,6 +270,14 @@
           <input type="email" id="new-player-email" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
           <input type="tel" id="new-player-phone" placeholder="Phone" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white" />
         </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 mb-1">Tee Time Preference</label>
+          <select id="new-player-pref" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-400 font-semibold focus:outline-none focus:border-emerald-500">
+            <option value="no_preference">No Preference</option>
+            <option value="early">🌅 Early (4:00 - 4:10 PM)</option>
+            <option value="late">🌇 Late (4:30 - 4:40 PM)</option>
+          </select>
+        </div>
         <button onclick="addNewPlayer()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold text-white shadow">Save to Roster</button>
       </div>
 
