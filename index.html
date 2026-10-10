@@ -562,17 +562,72 @@
       renderCurrentHole();
     }
 
+let showInactive = false;
+
     async function fetchPlayers() {
+      // Fetch both active and inactive members
       const { data } = await client
         .from('players')
         .select('*')
-        .eq('is_active', true)
         .order('name');
       allPlayers = data || [];
       renderAdminRoster();
       populateTrashPlayerSelects();
     }
 
+    function toggleInactiveFilter() {
+      showInactive = !showInactive;
+      document.getElementById('btn-toggle-inactive').textContent = showInactive ? "Show Active Only" : "Show Inactive / Alumni";
+      renderAdminRoster();
+    }
+
+    function renderAdminRoster() {
+      const activeList = allPlayers.filter(p => p.is_active);
+      const displayList = showInactive ? allPlayers.filter(p => !p.is_active) : activeList;
+
+      document.getElementById('admin-roster-count').textContent = activeList.length;
+      const list = document.getElementById('admin-roster-list');
+      list.innerHTML = '';
+
+      if (displayList.length === 0) {
+        list.innerHTML = `<div class="text-xs text-slate-500 text-center py-3">No ${showInactive ? 'inactive' : 'active'} golfers found.</div>`;
+        return;
+      }
+
+      displayList.forEach(p => {
+        const item = document.createElement('div');
+        item.className = "bg-slate-900 p-2.5 rounded-lg border border-slate-700/60 flex justify-between items-center";
+        item.innerHTML = `
+          <div>
+            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+              ${p.name}
+              ${!p.is_active ? '<span class="px-1.5 py-0.2 bg-slate-800 text-slate-400 text-[9px] rounded border border-slate-700">Inactive</span>' : ''}
+            </div>
+            <div class="text-[10px] text-slate-400">HDCP: ${p.handicap_index}</div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            ${p.is_active ? `
+              <select onchange="updatePlayerPreference('${p.id}', this.value)" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-emerald-400 font-semibold focus:outline-none">
+                <option value="no_preference" ${p.tee_time_preference === 'no_preference' ? 'selected' : ''}>No Pref</option>
+                <option value="early" ${p.tee_time_preference === 'early' ? 'selected' : ''}>🌅 Early</option>
+                <option value="late" ${p.tee_time_preference === 'late' ? 'selected' : ''}>🌇 Late</option>
+              </select>
+              <button onclick="editPlayerHdcp('${p.id}', '${p.name}',${p.handicap_index})" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-slate-300 rounded">Edit</button>
+              <button onclick="deactivatePlayer('${p.id}', '${p.name}')" class="px-2 py-1 bg-rose-950 hover:bg-rose-900 text-rose-300 text-[10px] font-bold rounded">Remove</button>
+            ` : `
+              <button onclick="reactivatePlayer('${p.id}', '${p.name}')" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-bold rounded shadow">Reactivate ♻️</button>
+            `}
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    async function reactivatePlayer(id, name) {
+      await client.from('players').update({ is_active: true }).eq('id', id);
+      alert(`${name} is now back on the active roster!`);
+      await fetchPlayers();
+    }
     function populateTrashPlayerSelects() {
       const fromSel = document.getElementById('trash-from-player');
       const toSel = document.getElementById('trash-target-player');
