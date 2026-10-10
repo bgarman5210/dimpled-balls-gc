@@ -298,10 +298,13 @@
 
       <!-- 3. ROSTER & TIME PREFERENCES -->
       <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
-        <h3 class="text-sm font-bold text-white">👥 Member Time Preferences (<span id="admin-roster-count">0</span>)</h3>
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-bold text-white">👥 Member Time Preferences (<span id="admin-roster-count">0</span>)</h3>
+          <button id="btn-toggle-inactive" onclick="toggleInactiveFilter()" class="text-[10px] text-slate-400 hover:text-white underline">Show Inactive / Alumni</button>
+        </div>
         <div id="admin-roster-list" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
       </div>
-
+      
       <!-- 4. BOTTOM: SCORECARD AUDIT & CORRECTIONS -->
       <div class="bg-slate-800 rounded-xl p-4 border border-amber-500/40 shadow space-y-3">
         <h3 class="text-sm font-bold text-amber-400 flex items-center justify-between">
