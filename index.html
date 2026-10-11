@@ -76,27 +76,35 @@
         </div>
       </div>
 
-      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow">
-        <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center justify-between">
-          <span>🏆 FedEx Cup Standings</span>
-          <span class="text-[10px] text-slate-400 font-normal">Season 1</span>
+    <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider">
+          🏆 FedEx Cup Standings
         </h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs">
-            <thead>
-              <tr class="border-b border-slate-700 text-slate-400 uppercase">
-                <th class="py-2 px-1">Rank</th>
-                <th class="py-2 px-2">Golfer</th>
-                <th class="py-2 px-1 text-center">Rounds</th>
-                <th class="py-2 px-2 text-right font-bold text-amber-400">Total Pts</th>
-              </tr>
-            </thead>
-            <tbody id="season-standings-body" class="divide-y divide-slate-800"></tbody>
-          </table>
+        <div class="flex gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-700 text-[10px] font-bold">
+          <button id="standings-scope-season" onclick="switchStandingsScope('season')" class="px-2 py-0.5 rounded bg-emerald-700 text-white shadow">
+            Season
+          </button>
+          <button id="standings-scope-year" onclick="switchStandingsScope('year')" class="px-2 py-0.5 rounded text-slate-400 hover:text-white">
+            2026 Annual
+          </button>
         </div>
       </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-slate-700 text-slate-400 uppercase">
+              <th class="py-2 px-1">Rank</th>
+              <th class="py-2 px-2">Golfer</th>
+              <th class="py-2 px-1 text-center">Rounds</th>
+              <th class="py-2 px-2 text-right font-bold text-amber-400">Total Pts</th>
+            </tr>
+          </thead>
+          <tbody id="season-standings-body" class="divide-y divide-slate-800"></tbody>
+        </table>
+      </div>
     </div>
-
+    
     <!-- 19th Hole Chatter & Alerts -->
     <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow space-y-3">
       <div class="flex justify-between items-center">
