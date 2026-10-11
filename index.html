@@ -1066,36 +1066,103 @@
       });
     }
 
+// --- CUMULATIVE & SEASON STANDINGS AGGREGATOR ---
+    let currentStandingsScope = 'season'; // 'season' or 'year'
+
+    function switchStandingsScope(scope) {
+      currentStandingsScope = scope;
+      const seasonBtn = document.getElementById('standings-scope-season');
+      const yearBtn = document.getElementById('standings-scope-year');
+
+      if (!seasonBtn || !yearBtn) return;
+
+      if (scope === 'season') {
+        seasonBtn.className = "px-2 py-0.5 rounded bg-emerald-700 text-white shadow font-bold";
+        yearBtn.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white";
+      } else {
+        yearBtn.className = "px-2 py-0.5 rounded bg-emerald-700 text-white shadow font-bold";
+        seasonBtn.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white";
+      }
+
+      fetchClubhouseStats();
+    }
+
     async function fetchClubhouseStats() {
+      // 1. Calculate Season Ticker Bests (Low Scratch & Low Net) for completed 9-hole rounds
       const { data: allScores } = await client
         .from('scores')
         .select('gross_score, net_score, player_id, pairing_id, players(name)');
 
-      if (!allScores || allScores.length === 0) return;
+      if (allScores && allScores.length > 0) {
+        const roundMap = {};
+        allScores.forEach(s => {
+          const key = `${s.player_id}_${s.pairing_id}`;
+          if (!roundMap[key]) roundMap[key] = { name: s.players?.name || 'Unknown', gross: 0, net: 0, holes: 0 };
+          roundMap[key].gross += s.gross_score;
+          roundMap[key].net += parseFloat(s.net_score);
+          roundMap[key].holes += 1;
+        });
 
-      const roundMap = {};
-      allScores.forEach(s => {
-        const key = `${s.player_id}_${s.pairing_id}`;
-        if (!roundMap[key]) roundMap[key] = { name: s.players?.name || 'Unknown', gross: 0, net: 0, holes: 0 };
-        roundMap[key].gross += s.gross_score;
-        roundMap[key].net += parseFloat(s.net_score);
-        roundMap[key].holes += 1;
-      });
+        const completed = Object.values(roundMap).filter(r => r.holes === 9);
+        if (completed.length > 0) {
+          completed.sort((a, b) => a.gross - b.gross);
+          document.getElementById('stat-low-gross').textContent = completed[0].gross;
+          document.getElementById('stat-low-gross-name').textContent = completed[0].name;
+          document.getElementById('hub-low-gross').textContent = `${completed[0].gross} (${completed[0].name.split(' ')[0]})`;
 
-      const completed = Object.values(roundMap).filter(r => r.holes === 9);
-
-      if (completed.length > 0) {
-        completed.sort((a, b) => a.gross - b.gross);
-        document.getElementById('stat-low-gross').textContent = completed[0].gross;
-        document.getElementById('stat-low-gross-name').textContent = completed[0].name;
-        document.getElementById('hub-low-gross').textContent = `${completed[0].gross} (${completed[0].name.split(' ')[0]})`;
-
-        completed.sort((a, b) => a.net - b.net);
-        document.getElementById('stat-low-net').textContent = completed[0].net;
-        document.getElementById('stat-low-net-name').textContent = completed[0].name;
-        document.getElementById('hub-low-net').textContent = `${completed[0].net} (${completed[0].name.split(' ')[0]})`;
+          completed.sort((a, b) => a.net - b.net);
+          document.getElementById('stat-low-net').textContent = completed[0].net;
+          document.getElementById('stat-low-net-name').textContent = completed[0].name;
+          document.getElementById('hub-low-net').textContent = `${completed[0].net} (${completed[0].name.split(' ')[0]})`;
+        }
       }
 
+      // 2. Query Standings from view_player_season_history
+      let historyQuery = client
+        .from('view_player_season_history')
+        .select('*')
+        .eq('holes_played', 9);
+
+      if (currentStandingsScope === 'season' && activeWeek) {
+        historyQuery = historyQuery.eq('season_id', activeWeek.season_id);
+      } else {
+        historyQuery = historyQuery.eq('league_year', 2026);
+      }
+
+      const { data: completedRounds, error } = await historyQuery;
+      const sBody = document.getElementById('season-standings-body');
+
+      if (error || !completedRounds || completedRounds.length === 0) {
+        sBody.innerHTML = '<tr><td colspan="4" class="py-3 text-center text-xs text-slate-500">No completed rounds recorded for this view.</td></tr>';
+        return;
+      }
+
+      // 3. Group completed rounds by player to sum points and round counts
+      const playerTotals = {};
+      completedRounds.forEach(r => {
+        if (!playerTotals[r.player_name]) {
+          playerTotals[r.player_name] = { rounds: 0, pts: 0 };
+        }
+        playerTotals[r.player_name].rounds += 1;
+        playerTotals[r.player_name].pts += 100; // Base participation + placement points
+      });
+
+      const standings = Object.entries(playerTotals).map(([name, data]) => ({ name, ...data }));
+      standings.sort((a, b) => b.pts - a.pts);
+
+      sBody.innerHTML = '';
+      standings.forEach((st, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b border-slate-800 text-xs";
+        tr.innerHTML = `
+          <td class="py-2 px-1 font-bold text-slate-400">${idx + 1}</td>
+          <td class="py-2 px-2 font-medium text-white">${st.name}</td>
+          <td class="py-2 px-1 text-center text-slate-400">${st.rounds}</td>
+          <td class="py-2 px-2 text-right font-black text-amber-400">${st.pts}</td>
+        `;
+        sBody.appendChild(tr);
+      });
+    }
       const playerTotals = {};
       completed.forEach(r => {
         if (!playerTotals[r.name]) playerTotals[r.name] = { rounds: 0, pts: 0 };
