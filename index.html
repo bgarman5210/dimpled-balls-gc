@@ -1180,13 +1180,16 @@
     async function executeScheduleSetup() {
       const scope = document.getElementById('season-scope-select').value;
       const startDateStr = document.getElementById('season-start-date').value;
-      const courseId = document.getElementById('season-course-select').value;
+      const rawCourseSelection = document.getElementById('season-course-select').value;
       const totalWeeks = parseInt(document.getElementById('season-total-weeks').value) || 8;
 
       if (!startDateStr) {
         alert("Please select a League Start Date.");
         return;
       }
+
+      // Split course_id and target tee_name
+      const [courseId, targetTeeName] = rawCourseSelection.split('|');
 
       const { data: seasonData } = await client.from('seasons').select('id').eq('is_active', true).limit(1);
       const seasonId = seasonData[0].id;
@@ -1203,13 +1206,18 @@
           const playDateStr = playDate.toISOString().split('T')[0];
           const side = altSides ? sides[(w - 1) % 2] : 'Front';
 
-          const { data: teeData } = await client
+          // Query matching tee set by course, side, and chosen tee name
+          let teeQuery = client
             .from('tee_sets')
             .select('id')
             .eq('course_id', courseId)
-            .eq('side', side)
-            .limit(1);
+            .eq('side', side);
 
+          if (targetTeeName) {
+            teeQuery = teeQuery.ilike('tee_name', `%${targetTeeName}%`);
+          }
+
+          const { data: teeData } = await teeQuery.limit(1);
           const teeSetId = teeData && teeData.length > 0 ? teeData[0].id : null;
 
           await client.from('weeks').upsert({
@@ -1245,13 +1253,17 @@
         playDate.setDate(playDate.getDate() + ((targetWeek - 1) * 7));
         const playDateStr = playDate.toISOString().split('T')[0];
 
-        const { data: teeData } = await client
+        let teeQuery = client
           .from('tee_sets')
           .select('id')
           .eq('course_id', courseId)
-          .eq('side', side)
-          .limit(1);
+          .eq('side', side);
 
+        if (targetTeeName) {
+          teeQuery = teeQuery.ilike('tee_name', `%${targetTeeName}%`);
+        }
+
+        const { data: teeData } = await teeQuery.limit(1);
         const teeSetId = teeData && teeData.length > 0 ? teeData[0].id : null;
 
         await client.from('weeks').upsert({
