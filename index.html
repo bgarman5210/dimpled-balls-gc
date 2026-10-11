@@ -132,7 +132,7 @@
   <!-- 2. VIEW: GAME DAY (SCORER & LIVE BOARD)    -->
   <!-- ========================================== -->
   <main id="view-gameday" class="p-4 max-w-lg mx-auto hidden space-y-4">
-    <!-- Sub-Nav Pill (Only visible when a round is staged or actively scoring) -->
+    <!-- Sub-Nav Pill (Visible when scoring) -->
     <div id="gameday-subnav" class="bg-slate-800 p-1 rounded-xl border border-slate-700 flex text-xs font-bold hidden">
       <button onclick="toggleGameDayView('scorer')" id="subnav-btn-scorer" class="flex-1 py-1.5 rounded-lg bg-emerald-600 text-white shadow text-center">Scorecard</button>
       <button onclick="toggleGameDayView('board')" id="subnav-btn-board" class="flex-1 py-1.5 rounded-lg text-slate-300 text-center">Live Board</button>
@@ -195,6 +195,14 @@
 
       <div id="player-score-cards" class="space-y-3"></div>
 
+      <!-- Quick Hole Auto-Save Indicator -->
+      <div class="flex justify-between items-center px-1 text-[11px] text-slate-400">
+        <span id="auto-save-status">💾 Auto-saved to live board</span>
+        <button onclick="advanceHole()" id="btn-next-hole" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-bold text-white shadow">
+          Next Hole →
+        </button>
+      </div>
+
       <!-- Attestation & Camera Upload at bottom of card -->
       <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 space-y-3">
         <h3 class="text-sm font-bold text-white flex items-center gap-1.5">📸 Attestation & Backup</h3>
@@ -216,7 +224,10 @@
     <!-- LIVE LEADERBOARD (Integrated inside Game Day) -->
     <div id="gameday-board-panel" class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow">
       <div class="flex justify-between items-center mb-3">
-        <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">🏆 Live Net Leaderboard</h2>
+        <div class="flex items-center gap-2">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">🏆 Live Net Leaderboard</h2>
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Live Auto-Sync Active"></span>
+        </div>
         <button onclick="fetchLeaderboard()" class="text-xs text-slate-400 hover:text-white">🔄 Refresh</button>
       </div>
       <div class="overflow-x-auto">
@@ -397,6 +408,7 @@
     let selectedGroupPlayers = [];
     let activeGroupNum = 1;
     let activeTeeTime = "16:00";
+    let activePairingId = null;
     let groupScores = {};
     let isAdminUnlocked = false;
     let weekSuggestedGroups = {};
@@ -415,6 +427,20 @@
       fetchLeaderboard();
       fetchClubhouseStats();
       fetchTrashTalk();
+      subscribeToLiveUpdates();
+    }
+
+    function subscribeToLiveUpdates() {
+      client
+        .channel('public:live-game')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'scores' }, () => {
+          fetchLeaderboard();
+          fetchClubhouseStats();
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trash_talk' }, () => {
+          fetchTrashTalk();
+        })
+        .subscribe();
     }
 
     function syncWeekSelects() {
@@ -476,7 +502,6 @@
         .limit(1);
 
       if (!weekData || weekData.length === 0) {
-        // Fallback: no schedule exists yet
         document.getElementById('course-header').textContent = "Season Not Scheduled";
         document.getElementById('hub-match-date').textContent = "--";
         document.getElementById('hub-course-title').textContent = "Week 1 Not Set";
@@ -607,17 +632,15 @@
       });
     }
 
-    // --- GAME DAY: LAUNCH, STAGING & SCORING ---
+    // --- GAME DAY: LAUNCH, STAGING & INCREMENTAL HOLE SCORING ---
     function launchScoringForGroup(groupNum) {
       const group = weekSuggestedGroups[groupNum];
       if (!group) return;
 
-      // 1. Pre-select this group in the staging drawer
       const groupSelect = document.getElementById('staging-group-select');
       const targetOpt = Array.from(groupSelect.options).find(o => o.value.startsWith(`${groupNum}|`));
       if (targetOpt) groupSelect.value = targetOpt.value;
 
-      // 2. Pre-check the suggested players
       clearAllCheckboxes();
       group.players.forEach(p => {
         const cb = document.getElementById(`chk-${p.id}`);
@@ -625,7 +648,6 @@
       });
       updateStagingCount();
 
-      // 3. Switch directly to Game Day and reveal staging panel
       switchTab('gameday');
       document.getElementById('gameday-staging-panel').classList.remove('hidden');
       document.getElementById('gameday-scoring-panel').classList.add('hidden');
@@ -633,7 +655,7 @@
       document.getElementById('gameday-subnav').classList.add('hidden');
     }
 
-    function confirmAndTeeOff() {
+    async function confirmAndTeeOff() {
       const checkedBoxes = Array.from(document.querySelectorAll('.staging-checkbox:checked'));
       if (checkedBoxes.length === 0) {
         alert("Please select at least 1 golfer for this group.");
@@ -649,6 +671,40 @@
 
       document.getElementById('active-group-tag').textContent = `Group ${activeGroupNum} • ${activeTeeTime}`;
 
+      // Insert or find pairing record with status 'in_progress'
+      const { data: existingPairing } = await client
+        .from('pairings')
+        .select('id')
+        .eq('week_id', activeWeek.id)
+        .eq('group_number', activeGroupNum)
+        .limit(1);
+
+      if (existingPairing && existingPairing.length > 0) {
+        activePairingId = existingPairing[0].id;
+      } else {
+        const { data: newPairing, error: pairingErr } = await client
+          .from('pairings')
+          .insert([{
+            week_id: activeWeek.id,
+            group_number: activeGroupNum,
+            tee_time: activeTeeTime,
+            status: 'in_progress'
+          }])
+          .select();
+
+        if (pairingErr) {
+          alert("Error initializing round: " + pairingErr.message);
+          return;
+        }
+        activePairingId = newPairing[0].id;
+
+        const pairingMembers = selectedGroupPlayers.map(p => ({
+          pairing_id: activePairingId,
+          player_id: p.id
+        }));
+        await client.from('pairing_players').insert(pairingMembers);
+      }
+
       // Populate partner attestation dropdown
       const attestSelect = document.getElementById('attestor-select');
       attestSelect.innerHTML = '<option value="">Select Playing Partner...</option>';
@@ -659,17 +715,29 @@
         attestSelect.appendChild(opt);
       });
 
+      // Load existing scores if resuming
+      const { data: savedScores } = await client
+        .from('scores')
+        .select('*')
+        .eq('pairing_id', activePairingId);
+
+      savedScores?.forEach(s => {
+        if (!groupScores[s.player_id]) groupScores[s.player_id] = {};
+        groupScores[s.player_id][s.hole_number] = s.gross_score;
+      });
+
       isRoundActivelyScoring = true;
       document.getElementById('gameday-staging-panel').classList.add('hidden');
       document.getElementById('gameday-scoring-panel').classList.remove('hidden');
       document.getElementById('gameday-board-panel').classList.add('hidden');
       document.getElementById('gameday-subnav').classList.remove('hidden');
       toggleGameDayView('scorer');
+      renderHoleNav();
       renderCurrentHole();
     }
 
     function reopenStaging() {
-      if (confirm("Adjust group roster? Any unsubmitted hole scores entered so far will remain in memory.")) {
+      if (confirm("Adjust group roster? Any hole scores entered so far will remain in memory.")) {
         document.getElementById('gameday-scoring-panel').classList.add('hidden');
         document.getElementById('gameday-staging-panel').classList.remove('hidden');
         document.getElementById('gameday-subnav').classList.add('hidden');
@@ -759,7 +827,8 @@
             ? 'bg-emerald-500 text-slate-950 font-black shadow-md' 
             : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
         }`;
-        btn.onclick = () => {
+        btn.onclick = async () => {
+          await saveActiveHoleScores();
           currentHoleIndex = idx;
           renderHoleNav();
           renderCurrentHole();
@@ -805,9 +874,16 @@
         `;
         container.appendChild(card);
       });
+
+      const nextBtn = document.getElementById('btn-next-hole');
+      if (currentHoleIndex === holes.length - 1) {
+        nextBtn.textContent = "Finish to Hole 1 ↻";
+      } else {
+        nextBtn.textContent = `Next (Hole ${holes[currentHoleIndex + 1]?.hole_number}) →`;
+      }
     }
 
-    function adjustScore(playerId, delta) {
+    async function adjustScore(playerId, delta) {
       const h = holes[currentHoleIndex];
       const player = selectedGroupPlayers.find(p => p.id === playerId);
       const courseHdcp = calculateCourseHdcp(player.handicap_index);
@@ -819,6 +895,54 @@
       groupScores[playerId][h.hole_number] = score;
       document.getElementById(`gross-${playerId}`).textContent = score;
       document.getElementById(`net-${playerId}`).textContent = score - strokes;
+
+      // Auto-save to database immediately on score change
+      await saveActiveHoleScores();
+    }
+
+    async function advanceHole() {
+      await saveActiveHoleScores();
+      if (currentHoleIndex < holes.length - 1) {
+        currentHoleIndex++;
+      } else {
+        currentHoleIndex = 0;
+      }
+      renderHoleNav();
+      renderCurrentHole();
+    }
+
+    async function saveActiveHoleScores() {
+      if (!activePairingId || !holes.length) return;
+      const h = holes[currentHoleIndex];
+      const statusEl = document.getElementById('auto-save-status');
+      if (statusEl) statusEl.textContent = "💾 Saving to live board...";
+
+      const rows = selectedGroupPlayers.map(p => {
+        const courseHdcp = calculateCourseHdcp(p.handicap_index);
+        const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
+        const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
+        return {
+          pairing_id: activePairingId,
+          player_id: p.id,
+          hole_number: h.hole_number,
+          gross_score: gross,
+          net_score: gross - strokes,
+          strokes_received: strokes
+        };
+      });
+
+      // Upsert incrementally on unique pairing_id, player_id, hole_number
+      await client.from('scores').upsert(rows, { onConflict: 'pairing_id,player_id,hole_number' });
+
+      if (statusEl) statusEl.textContent = `💾 Hole ${h.hole_number} saved to live board ✓`;
+
+      // Check for real-time milestones (birdie, eagle, ace)
+      for (const p of selectedGroupPlayers) {
+        const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
+        if (gross < h.par || gross === 1) {
+          await checkAndBroadcastMilestone(p, h, gross, activePairingId);
+        }
+      }
     }
 
     async function submitAttestation() {
@@ -834,11 +958,14 @@
       submitBtn.disabled = true;
       submitBtn.textContent = "Finalizing & Syncing...";
 
+      // Save any pending hole scores
+      await saveActiveHoleScores();
+
       let photoUrl = null;
       if (fileInput.files.length > 0) {
         const file = fileInput.files[0];
         const fileName = `week${activeWeek.week_number}-g${activeGroupNum}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-        const { data, error } = await client.storage.from('scorecards').upload(fileName, file);
+        const { error } = await client.storage.from('scorecards').upload(fileName, file);
         if (error) {
           alert("Error uploading card: " + error.message);
           submitBtn.disabled = false;
@@ -848,61 +975,20 @@
         photoUrl = fileName;
       }
 
-      const { data: pairingData, error: pairingErr } = await client
+      // Finalize pairing status to 'attested'
+      await client
         .from('pairings')
-        .insert([{
-          week_id: activeWeek.id,
-          group_number: activeGroupNum,
-          tee_time: activeTeeTime,
+        .update({
           attestor_id: attestor,
           scorecard_photo_url: photoUrl,
           status: 'attested'
-        }])
-        .select();
+        })
+        .eq('id', activePairingId);
 
-      if (pairingErr) {
-        alert("Error saving pairing: " + pairingErr.message);
-        submitBtn.disabled = false;
-        return;
-      }
-
-      const pairingId = pairingData[0].id;
-      const pairingMembers = selectedGroupPlayers.map(p => ({ pairing_id: pairingId, player_id: p.id }));
-      await client.from('pairing_players').insert(pairingMembers);
-
-      const scoreRows = [];
-      selectedGroupPlayers.forEach(p => {
-        const courseHdcp = calculateCourseHdcp(p.handicap_index);
-        holes.forEach(h => {
-          const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
-          const strokes = courseHdcp >= h.league_stroke_rank ? 1 : 0;
-          scoreRows.push({
-            pairing_id: pairingId,
-            player_id: p.id,
-            hole_number: h.hole_number,
-            gross_score: gross,
-            net_score: gross - strokes,
-            strokes_received: strokes
-          });
-        });
-      });
-
-      await client.from('scores').insert(scoreRows);
-
-      for (const p of selectedGroupPlayers) {
-        for (const h of holes) {
-          const gross = (groupScores[p.id] && groupScores[p.id][h.hole_number]) || h.par;
-          if (gross < h.par || gross === 1) {
-            await checkAndBroadcastMilestone(p, h, gross, pairingId);
-          }
-        }
-      }
-
-      alert("Group round attested & scores saved to cloud!");
+      alert("Group round finalized and attested!");
       submitBtn.disabled = false;
       submitBtn.textContent = "Finalize Group & Attest";
 
-      // Reset active scoring state and show final leaderboard
       isRoundActivelyScoring = false;
       document.getElementById('gameday-scoring-panel').classList.add('hidden');
       document.getElementById('gameday-staging-panel').classList.add('hidden');
@@ -914,7 +1000,6 @@
 
     async function fetchLeaderboard() {
       const tbody = document.getElementById('leaderboard-body');
-      tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-xs text-slate-400">Loading live scores...</td></tr>';
 
       const { data: scoreData, error } = await client
         .from('scores')
@@ -1009,7 +1094,7 @@
       });
     }
 
-    // --- TRASH TALK & MILESTONES ---
+    // --- TRASH TALK & REALTIME MILESTONES ---
     async function checkAndBroadcastMilestone(player, hole, grossScore, pairingId = null) {
       const diff = grossScore - hole.par;
       let postType = null;
@@ -1028,6 +1113,17 @@
 
       if (!postType) return;
 
+      const { data: existing } = await client
+        .from('trash_talk')
+        .select('id')
+        .eq('player_id', player.id)
+        .eq('hole_number', hole.hole_number)
+        .eq('post_type', postType)
+        .eq('pairing_id', pairingId)
+        .limit(1);
+
+      if (existing && existing.length > 0) return;
+
       await client.from('trash_talk').insert([{
         player_id: player.id,
         target_name: 'The Field',
@@ -1036,8 +1132,6 @@
         hole_number: hole.hole_number,
         pairing_id: pairingId
       }]);
-
-      await fetchTrashTalk();
     }
 
     async function fetchTrashTalk() {
@@ -1188,9 +1282,7 @@
         return;
       }
 
-      // Split course_id and target tee_name
       const [courseId, targetTeeName] = rawCourseSelection.split('|');
-
       const { data: seasonData } = await client.from('seasons').select('id').eq('is_active', true).limit(1);
       const seasonId = seasonData[0].id;
       const startDate = new Date(startDateStr + 'T12:00:00');
@@ -1206,7 +1298,6 @@
           const playDateStr = playDate.toISOString().split('T')[0];
           const side = altSides ? sides[(w - 1) % 2] : 'Front';
 
-          // Query matching tee set by course, side, and chosen tee name
           let teeQuery = client
             .from('tee_sets')
             .select('id')
